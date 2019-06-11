@@ -204,6 +204,7 @@ public:
     }
     void close_avformat(void) {
         if (avfmt != NULL) {
+            fprintf(stderr,"Closing avformat %s\n",file_path.c_str());
             avformat_close_input(&avfmt);
             avfmt = NULL;
         }
