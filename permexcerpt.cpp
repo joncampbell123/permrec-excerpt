@@ -385,6 +385,57 @@ public:
     bool is_eof(void) const {
         return eof;
     }
+    AVFrame *decode_frame(AVPacket *pkt) {
+        int got_frame = 0;
+        int rd;
+
+        if (avfmt == NULL || pkt == NULL)
+            return NULL;
+
+        if (size_t(pkt->stream_index) >= size_t(avfmt->nb_streams))
+            return NULL;
+
+        AVStream *avs = avfmt_stream(size_t(pkt->stream_index));
+        if (avs == NULL)
+            return NULL;
+
+        Stream &strm = stream(size_t(pkt->stream_index));
+        if (!strm.codec_open) {
+            if (!open_stream_codec(size_t(pkt->stream_index)))
+                return NULL;
+        }
+
+        AVCodecContext *avc = avs->codec;
+        if (avc == NULL)
+            return NULL;
+
+        if (avc->codec_type == AVMEDIA_TYPE_VIDEO) {
+            AVFrame *fr = av_frame_alloc();
+            if (fr == NULL) return NULL;
+
+            rd = avcodec_decode_video2(avc,fr,&got_frame,pkt);
+            if (rd < 0 || !got_frame || fr->width == 0 || fr->height == 0) {
+                av_frame_free(&fr);
+                return NULL;
+            }
+
+            return fr;
+        }
+        else if (avc->codec_type == AVMEDIA_TYPE_AUDIO) {
+             AVFrame *fr = av_frame_alloc();
+            if (fr == NULL) return NULL;
+
+            rd = avcodec_decode_audio4(avc,fr,&got_frame,pkt);
+            if (rd < 0 || !got_frame || fr->nb_samples == 0) {
+                av_frame_free(&fr);
+                return NULL;
+            }
+
+            return fr;
+        }
+
+        return NULL;
+    }
 protected:
     AVPacket                avpkt;
     std::vector<Stream>     streams;
