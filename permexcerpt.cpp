@@ -149,6 +149,11 @@ bool GUI_Idle(void) {
         else if (event.type == SDL_WINDOWEVENT) {
             GUI_OnWindowEvent(event.window);
         }
+        else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+            if (event.key.keysym.sym == SDLK_ESCAPE) {
+                quitting_app = true;
+            }
+        }
     }
 
     return !(quitting_app);
