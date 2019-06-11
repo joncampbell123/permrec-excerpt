@@ -499,6 +499,8 @@ protected:
 };
 
 InputFile                   in_file;
+int                         in_file_video_stream = -1;
+int                         in_file_audio_stream = -1;
 
 InputFile &current_file(void) {
     return in_file;
@@ -599,6 +601,10 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Failed to open file %s\n",open_file.c_str());
         return 1;
     }
+
+    in_file_audio_stream = in_file.find_default_stream_audio();
+    in_file_video_stream = in_file.find_default_stream_video();
+    fprintf(stderr,"Chose audio stream %d, video stream %d\n",in_file_audio_stream,in_file_video_stream);
 
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_AUDIO) != 0) {
         fprintf(stderr,"Unable to init SDL2\n");
