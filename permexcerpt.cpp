@@ -209,6 +209,22 @@ public:
             avfmt = NULL;
         }
     }
+    size_t avfmt_stream_count(void) const {
+        return (avfmt != NULL) ? size_t(avfmt->nb_streams) : size_t(0);
+    }
+    AVStream *avfmt_stream(const size_t i) {
+        if (avfmt != NULL) {
+            if (i < size_t(avfmt->nb_streams))
+                return avfmt->streams[i];
+        }
+
+        return NULL;
+    }
+    AVCodecContext *avfmt_stream_codec_context(const size_t i) {
+        AVStream *s = avfmt_stream(i);
+        if (s != NULL) return s->codec;
+        return NULL;
+    }
 protected:
     std::string             file_path;
     AVFormatContext*        avfmt = NULL;
