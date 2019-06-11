@@ -385,10 +385,11 @@ public:
     bool is_eof(void) const {
         return eof;
     }
-    AVFrame *decode_frame(AVPacket *pkt) {
+    AVFrame *decode_frame(AVPacket *pkt,unsigned int &ft) {
         int got_frame = 0;
         int rd;
 
+        ft = 0u;
         if (avfmt == NULL || pkt == NULL)
             return NULL;
 
@@ -419,6 +420,7 @@ public:
                 return NULL;
             }
 
+            ft = static_cast<unsigned int>(avc->codec_type);
             return fr;
         }
         else if (avc->codec_type == AVMEDIA_TYPE_AUDIO) {
@@ -431,6 +433,7 @@ public:
                 return NULL;
             }
 
+            ft = static_cast<unsigned int>(avc->codec_type);
             return fr;
         }
 
