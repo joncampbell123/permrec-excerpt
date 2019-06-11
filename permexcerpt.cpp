@@ -238,6 +238,11 @@ public:
                 fprintf(stderr," type=Audio");
             else
                 fprintf(stderr," type=?");
+            fprintf(stderr," time_base=%llu/%llu ticks/frame=%d delay=%d %dx%d coded=%dx%d hasb=%d\n",
+                static_cast<unsigned long long>(ctx->time_base.num),static_cast<unsigned long long>(ctx->time_base.den),
+                ctx->ticks_per_frame,ctx->delay,ctx->width,ctx->height,ctx->coded_width,ctx->coded_height,ctx->has_b_frames);
+            fprintf(stderr," rate=%d channels=%d",
+                ctx->sample_rate,ctx->channels);
             fprintf(stderr,"\n");
         }
     }
