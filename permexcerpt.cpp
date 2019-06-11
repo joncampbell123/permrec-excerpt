@@ -64,6 +64,28 @@ typedef enum PROCESS_DPI_AWARENESS {
 #include <array>
 #include <queue>
 
+extern "C" {
+#include <libavutil/opt.h>
+#include <libavutil/avutil.h>
+#include <libavutil/pixfmt.h>
+#include <libavutil/pixdesc.h>
+#include <libavutil/samplefmt.h>
+#include <libavutil/pixelutils.h>
+
+#include <libavcodec/avcodec.h>
+#include <libavcodec/version.h>
+
+#include <libavformat/avformat.h>
+#include <libavformat/avio.h>
+#include <libavformat/version.h>
+
+#include <libswscale/swscale.h>
+#include <libswscale/version.h>
+
+#include <libswresample/swresample.h>
+#include <libswresample/version.h>
+}
+
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
@@ -135,6 +157,10 @@ void audio_callback(void *userdata,Uint8* stream,int len) {
 int main(int argc,char **argv) {
     (void)argc;
     (void)argv;
+
+	av_register_all();
+	avformat_network_init();
+	avcodec_register_all();
 
 #if defined(WIN32)
     Windows_DPI_Awareness_Init();
