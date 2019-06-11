@@ -164,6 +164,16 @@ void audio_callback(void *userdata,Uint8* stream,int len) {
 
 class InputFile {
 public:
+    class Stream {
+    public:
+        Stream() {
+        }
+        ~Stream() {
+        }
+    public:
+        bool            codec_open = false;
+    };
+public:
     InputFile() {
     }
     ~InputFile() {
@@ -188,6 +198,9 @@ public:
             fprintf(stderr,"avformat: Did not find stream info for %s\n",file_path.c_str());
 
         av_dump_format(avfmt, 0, file_path.c_str(), 0);
+        streams.resize(avfmt_stream_count());
+
+        open_stream_codecs();
 
         return true;
     }
@@ -202,12 +215,60 @@ public:
         open_flag = false;
         file_path.clear();
     }
+    bool open_stream_codec(const size_t i) {
+        AVCodecContext *ctx = avfmt_stream_codec_context(i);
+        if (ctx != NULL) {
+            Stream &strm = stream(i);
+            if (!strm.codec_open) {
+                if (avcodec_open2(ctx,avcodec_find_decoder(ctx->codec_id),NULL) >= 0) {
+                    fprintf(stderr,"Stream %zu codec opened\n",i);
+                    strm.codec_open = true;
+                }
+                else {
+                    fprintf(stderr,"Stream %zu failed to open codec\n",i);
+                }
+            }
+
+            return strm.codec_open;
+        }
+
+        return false;
+    }
+    size_t open_stream_codecs(void) {
+        size_t ok = 0;
+
+        for (size_t i=0;i < avfmt_stream_count();i++) {
+            if (open_stream_codec(i))
+                ok++;
+        }
+
+        return ok;
+    }
+    void close_stream_codec(const size_t i) {
+        AVCodecContext *ctx = avfmt_stream_codec_context(i);
+        if (ctx != NULL) {
+            Stream &strm = stream(i);
+            if (strm.codec_open) {
+                fprintf(stderr,"Stream %zu closing codec\n",i);
+                avcodec_close(ctx);
+                strm.codec_open = false;
+            }
+        }
+    }
+    void close_stream_codecs(void) {
+        if (avfmt != NULL) {
+            for (size_t i=0;i < avfmt_stream_count();i++)
+                close_stream_codec(i);
+        }
+    }
     void close_avformat(void) {
+        close_stream_codecs();
         if (avfmt != NULL) {
             fprintf(stderr,"Closing avformat %s\n",file_path.c_str());
             avformat_close_input(&avfmt);
             avfmt = NULL;
         }
+        streams.clear();
     }
     size_t avfmt_stream_count(void) const {
         return (avfmt != NULL) ? size_t(avfmt->nb_streams) : size_t(0);
@@ -225,7 +286,11 @@ public:
         if (s != NULL) return s->codec;
         return NULL;
     }
+    Stream &stream(const size_t i) {
+        return streams.at(i); // throw C++ exception if out of bounds
+    }
 protected:
+    std::vector<Stream>     streams;
     std::string             file_path;
     AVFormatContext*        avfmt = NULL;
     bool                    open_flag = false;
