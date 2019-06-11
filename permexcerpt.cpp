@@ -242,6 +242,7 @@ public:
         print_fmt_debug();
         open_stream_codecs();
 
+        open_flag = true;
         return true;
     }
     const std::string &get_path(void) const {
@@ -386,7 +387,7 @@ public:
             avpkt_valid = false;
         }
     }
-    AVPacket *read_packet(void) {
+    AVPacket *read_packet(void) { // caller must not free it, because we will
         if (avfmt != NULL && !eof) {
             avpkt_reset();
             if (av_read_frame(avfmt,&avpkt) >= 0) {
@@ -474,7 +475,19 @@ InputFile &current_file(void) {
     return in_file;
 }
 
+bool is_playing(void) {
+    return true;
+}
+
 void Play_Idle(void) {
+    auto &fp = current_file();
+
+    if (is_playing() && fp.is_open()) {
+        AVPacket *pkt = in_file.read_packet();
+        if (pkt != NULL) {
+            // TODO
+        }
+    }
 }
 
 int main(int argc,char **argv) {
