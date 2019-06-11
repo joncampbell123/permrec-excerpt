@@ -200,6 +200,18 @@ public:
             channel_layout = 0;
             format = AV_PIX_FMT_NONE;
         }
+        bool operator==(const tracking &o) {
+            return  width ==            o.width &&
+                    height ==           o.height &&
+                    linesize ==         o.linesize &&
+                    channels ==         o.channels &&
+                    sample_rate ==      o.sample_rate &&
+                    channel_layout ==   o.channel_layout &&
+                    format ==           o.format;
+        }
+        bool operator!=(const tracking &o) {
+            return !(*this == o);
+        }
     };
     class Stream {
     public:
