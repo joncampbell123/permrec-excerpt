@@ -475,8 +475,24 @@ InputFile &current_file(void) {
     return in_file;
 }
 
+us_time_t playing_base = 0;
+bool playing = false;
+
 bool is_playing(void) {
-    return true;
+    return playing;
+}
+
+void do_play(void) {
+    if (!playing) {
+        playing_base = monotonic_clock_us();
+        playing = true;
+    }
+}
+
+void do_stop(void) {
+    if (playing) {
+        playing = false;
+    }
 }
 
 void Play_Idle(void) {
@@ -486,6 +502,10 @@ void Play_Idle(void) {
         AVPacket *pkt = in_file.read_packet();
         if (pkt != NULL) {
             // TODO
+        }
+        else if (in_file.is_eof()) {
+            // TODO if all frames played
+            do_stop();
         }
     }
 }
@@ -576,10 +596,12 @@ int main(int argc,char **argv) {
     assert(mainSurface != NULL);
     UpdateDisplayRect();
 
+    do_play();
     while (!quitting_app) {
         Play_Idle();
         GUI_Idle();
     }
+    do_stop();
 
     SDL_DestroyWindow(mainWindow);
     SDL_CloseAudio();
