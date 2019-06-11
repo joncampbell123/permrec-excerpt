@@ -226,6 +226,20 @@ public:
                 fprintf(stderr," start=NOPTS");
             fprintf(stderr,"\n");
         }
+
+        AVCodecContext *ctx = avfmt_stream_codec_context(i);
+        if (ctx != NULL) {
+            fprintf(stderr,"Stream %zu: Codec '%s' (%s)",i,
+                ctx->codec ? ctx->codec->name : NULL,
+                ctx->codec ? ctx->codec->long_name : NULL);
+            if (ctx->codec_type == AVMEDIA_TYPE_VIDEO)
+                fprintf(stderr," type=Video");
+            else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO)
+                fprintf(stderr," type=Audio");
+            else
+                fprintf(stderr," type=?");
+            fprintf(stderr,"\n");
+        }
     }
     bool open_stream_codec(const size_t i) {
         AVCodecContext *ctx = avfmt_stream_codec_context(i);
