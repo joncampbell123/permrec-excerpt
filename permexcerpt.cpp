@@ -476,7 +476,20 @@ InputFile &current_file(void) {
 }
 
 us_time_t playing_base = 0;
+double play_in_base = 0;
+double play_in_time = 0;
 bool playing = false;
+
+double get_play_time_now(void) {
+    if (playing) {
+        play_in_time  = static_cast<double>(monotonic_clock_us());
+        play_in_time -= static_cast<double>(playing_base);
+        play_in_time /= 1000000;
+        play_in_time += play_in_base;
+    }
+
+    return play_in_time;
+}
 
 bool is_playing(void) {
     return playing;
@@ -485,12 +498,16 @@ bool is_playing(void) {
 void do_play(void) {
     if (!playing) {
         playing_base = monotonic_clock_us();
+        play_in_base = play_in_time;
         playing = true;
     }
 }
 
 void do_stop(void) {
     if (playing) {
+        get_play_time_now();
+        playing_base = monotonic_clock_us();
+        play_in_base = play_in_time;
         playing = false;
     }
 }
