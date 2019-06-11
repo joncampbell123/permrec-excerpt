@@ -527,7 +527,7 @@ void Play_Idle(void) {
 
     if (is_playing()) {
         if (fp.is_open()) {
-            AVPacket *pkt = in_file.read_packet();
+            AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
             if (pkt != NULL) {
                 // TODO
             }
