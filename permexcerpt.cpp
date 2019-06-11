@@ -169,9 +169,56 @@ public:
         Stream() {
         }
         ~Stream() {
+            close();
+        }
+        void close(void) {
+            close_src_frame();
+            close_dst_frame();
+            close_converter();
+        }
+        void close_src_frame(void) {
+            close_src_video();
+            close_src_audio();
+        }
+        void close_dst_frame(void) {
+            close_dst_video();
+            close_dst_audio();
+        }
+        void close_dst_video(void) {
+            av_frame_free(&dst_video_frame);
+        }
+        void close_dst_audio(void) {
+            av_frame_free(&dst_audio_frame);
+        }
+        void close_src_video(void) {
+            av_frame_free(&src_video_frame);
+        }
+        void close_src_audio(void) {
+            av_frame_free(&src_audio_frame);
+        }
+        void close_swr_audio(void) {
+            swr_free(&swr_audio);
+        }
+        void close_sws_video(void) {
+            if (sws_video != NULL) {
+                sws_freeContext(sws_video);
+                sws_video = NULL;
+            }
+        }
+        void close_converter(void) {
+            close_swr_audio();
+            close_sws_video();
         }
     public:
         bool            codec_open = false;
+        bool            is_video = false;
+        bool            is_audio = false;
+        AVFrame*        src_video_frame = NULL;
+        AVFrame*        src_audio_frame = NULL;
+        AVFrame*        dst_video_frame = NULL;
+        AVFrame*        dst_audio_frame = NULL;
+        SwrContext*     swr_audio = NULL;
+        SwsContext*     sws_video = NULL;
     };
 public:
     InputFile() {
