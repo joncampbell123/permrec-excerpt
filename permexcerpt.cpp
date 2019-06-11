@@ -122,6 +122,25 @@ void Windows_DPI_Awareness_Init() {
 
 using namespace std;
 
+#define us_time_t_INVALID_TIME (0xFFFFFFFFFFFFFFFFULL)
+
+typedef uint64_t us_time_t;
+
+typedef uint64_t ns_time_t;
+
+ns_time_t monotonic_clock_ns(void) {
+	struct timespec tv;
+
+	if (clock_gettime(CLOCK_MONOTONIC,&tv))
+		return us_time_t_INVALID_TIME;
+
+	return (ns_time_t(tv.tv_sec) * 1000000000ULL) + ns_time_t(tv.tv_nsec);
+}
+
+us_time_t monotonic_clock_us(void) {
+	return us_time_t(monotonic_clock_ns() / 1000ULL);
+}
+
 int                 want_audio_rate = -1;
 int                 want_audio_channels = -1;
 
