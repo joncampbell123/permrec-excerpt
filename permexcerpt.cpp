@@ -281,6 +281,7 @@ public:
         return open_flag;
     }
     void close(void) {
+        avpkt_free();
         close_avformat();
         open_flag = false;
         file_path.clear();
@@ -383,6 +384,7 @@ public:
             avfmt = NULL;
         }
         streams.clear();
+        eof = false;
     }
     size_t avfmt_stream_count(void) const {
         return (avfmt != NULL) ? size_t(avfmt->nb_streams) : size_t(0);
@@ -403,11 +405,39 @@ public:
     Stream &stream(const size_t i) {
         return streams.at(i); // throw C++ exception if out of bounds
     }
+    void avpkt_reset(void) {
+        avpkt_free();
+        av_init_packet(&avpkt);
+        avpkt_valid = true;
+    }
+    void avpkt_free(void) {
+        if (avpkt_valid) {
+            av_packet_unref(&avpkt);
+            avpkt_valid = false;
+        }
+    }
+    AVPacket *read_packet(void) {
+        if (avfmt != NULL && !eof) {
+            avpkt_reset();
+            if (av_read_frame(avfmt,&avpkt) >= 0)
+                return &avpkt;
+
+            eof = true;
+        }
+
+        return NULL;
+    }
+    bool is_eof(void) const {
+        return eof;
+    }
 protected:
+    AVPacket                avpkt;
     std::vector<Stream>     streams;
     std::string             file_path;
     AVFormatContext*        avfmt = NULL;
     bool                    open_flag = false;
+    bool                    avpkt_valid = false;
+    bool                    eof = false;
 };
 
 InputFile                   in_file;
