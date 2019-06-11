@@ -181,38 +181,6 @@ void audio_callback(void *userdata,Uint8* stream,int len) {
 
 class InputFile {
 public:
-    class tracking {
-    public:
-        int             width,height,linesize,channels,sample_rate;
-        uint64_t        channel_layout;
-        AVPixelFormat   format;
-    public:
-        tracking() {
-            clear();
-        }
-    public:
-        void clear(void) {
-            width = -1;
-            height = -1;
-            linesize = -1;
-            channels = -1;
-            sample_rate = -1;
-            channel_layout = 0;
-            format = AV_PIX_FMT_NONE;
-        }
-        bool operator==(const tracking &o) {
-            return  width ==            o.width &&
-                    height ==           o.height &&
-                    linesize ==         o.linesize &&
-                    channels ==         o.channels &&
-                    sample_rate ==      o.sample_rate &&
-                    channel_layout ==   o.channel_layout &&
-                    format ==           o.format;
-        }
-        bool operator!=(const tracking &o) {
-            return !(*this == o);
-        }
-    };
     class Stream {
     public:
         Stream() {
@@ -262,10 +230,8 @@ public:
         bool            codec_open = false;
         bool            is_video = false;
         bool            is_audio = false;
-        tracking        src_trk;
         AVFrame*        src_video_frame = NULL;
         AVFrame*        src_audio_frame = NULL;
-        tracking        dst_trk;
         AVFrame*        dst_video_frame = NULL;
         AVFrame*        dst_audio_frame = NULL;
         SwrContext*     swr_audio = NULL;
