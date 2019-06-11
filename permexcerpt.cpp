@@ -436,8 +436,12 @@ public:
     AVPacket *read_packet(void) {
         if (avfmt != NULL && !eof) {
             avpkt_reset();
-            if (av_read_frame(avfmt,&avpkt) >= 0)
-                return &avpkt;
+            if (av_read_frame(avfmt,&avpkt) >= 0) {
+                if (avpkt.stream_index < avfmt->nb_streams)
+                    return &avpkt;
+                else
+                    return NULL;
+            }
 
             eof = true;
         }
