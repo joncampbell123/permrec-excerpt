@@ -175,6 +175,7 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
     }
 }
 
+bool is_playing(void);
 void do_play(void);
 void do_stop(void);
 
@@ -191,6 +192,12 @@ bool GUI_Idle(void) {
         else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
             if (event.key.keysym.sym == SDLK_ESCAPE) {
                 quitting_app = true;
+            }
+            else if (event.key.keysym.sym == SDLK_SPACE) {
+                if (is_playing())
+                    do_stop();
+                else
+                    do_play();
             }
         }
     }
@@ -518,13 +525,18 @@ void do_stop(void) {
 void Play_Idle(void) {
     auto &fp = current_file();
 
-    if (is_playing() && fp.is_open()) {
-        AVPacket *pkt = in_file.read_packet();
-        if (pkt != NULL) {
-            // TODO
+    if (is_playing()) {
+        if (fp.is_open()) {
+            AVPacket *pkt = in_file.read_packet();
+            if (pkt != NULL) {
+                // TODO
+            }
+            else if (in_file.is_eof()) {
+                // TODO if all frames played
+                do_stop();
+            }
         }
-        else if (in_file.is_eof()) {
-            // TODO if all frames played
+        else {
             do_stop();
         }
     }
