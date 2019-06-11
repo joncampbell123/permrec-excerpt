@@ -200,6 +200,7 @@ public:
         av_dump_format(avfmt, 0, file_path.c_str(), 0);
         streams.resize(avfmt_stream_count());
 
+        print_fmt_debug();
         open_stream_codecs();
 
         return true;
@@ -214,6 +215,18 @@ public:
         close_avformat();
         open_flag = false;
         file_path.clear();
+    }
+    void print_fmt_debug(void) {
+        if (avfmt != NULL) {
+            fprintf(stderr,"Format: %d streams, start_time=%lld/%lld duration=%lld/%lld bitrate=%lld packet_size=%u\n",
+                static_cast<int>(avfmt->nb_streams),
+                static_cast<signed long long>(avfmt->start_time),
+                static_cast<signed long long>(AV_TIME_BASE),
+                static_cast<signed long long>(avfmt->duration),
+                static_cast<signed long long>(AV_TIME_BASE),
+                static_cast<signed long long>(avfmt->bit_rate),
+                avfmt->packet_size);
+        }
     }
     void print_stream_debug(const size_t i) {
         AVStream *s = avfmt_stream(i);
