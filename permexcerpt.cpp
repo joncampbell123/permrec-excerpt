@@ -125,12 +125,29 @@ using namespace std;
 int                 want_audio_rate = -1;
 int                 want_audio_channels = -1;
 
+SDL_Rect            display_region;
+
 SDL_AudioSpec       audio_spec;
 bool                audio_open = false;
 
 SDL_Window*         mainWindow = NULL;
 SDL_Surface*        mainSurface = NULL;
 bool                quitting_app = false;
+
+void UpdateDisplayRect(void) {
+    if (mainSurface) {
+        display_region.x = 0;
+        display_region.y = 0;
+        display_region.w = mainSurface->w;
+        display_region.h = mainSurface->h;
+    }
+    else {
+        display_region.x = 0;
+        display_region.y = 0;
+        display_region.w = 32;
+        display_region.h = 32;
+    }
+}
 
 void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
     if (wevent.event == SDL_WINDOWEVENT_RESIZED) {
@@ -530,6 +547,7 @@ int main(int argc,char **argv) {
     }
     mainSurface = SDL_GetWindowSurface(mainWindow);
     assert(mainSurface != NULL);
+    UpdateDisplayRect();
 
     while (!quitting_app) {
         GUI_Idle();
