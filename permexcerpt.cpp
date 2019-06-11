@@ -449,7 +449,7 @@ public:
         if (avfmt != NULL && !eof) {
             avpkt_reset();
             if (av_read_frame(avfmt,&avpkt) >= 0) {
-                if (avpkt.stream_index < avfmt->nb_streams)
+                if (size_t(avpkt.stream_index) < size_t(avfmt->nb_streams))
                     return &avpkt;
                 else
                     return NULL;
