@@ -479,6 +479,9 @@ InputFile &current_file(void) {
     return in_file;
 }
 
+void Play_Idle(void) {
+}
+
 int main(int argc,char **argv) {
     std::string open_file;
 
@@ -566,6 +569,7 @@ int main(int argc,char **argv) {
     UpdateDisplayRect();
 
     while (!quitting_app) {
+        Play_Idle();
         GUI_Idle();
     }
 
