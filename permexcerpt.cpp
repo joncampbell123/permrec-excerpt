@@ -215,6 +215,18 @@ public:
         open_flag = false;
         file_path.clear();
     }
+    void print_stream_debug(const size_t i) {
+        AVStream *s = avfmt_stream(i);
+        if (s != NULL) {
+            fprintf(stderr,"Stream %zu: Stream time_base=%llu/%llu",i,
+                static_cast<unsigned long long>(s->time_base.num),static_cast<unsigned long long>(s->time_base.den));
+            if (s->start_time != AV_NOPTS_VALUE)
+                fprintf(stderr," start=%lld",static_cast<signed long long>(s->start_time));
+            else
+                fprintf(stderr," start=NOPTS");
+            fprintf(stderr,"\n");
+        }
+    }
     bool open_stream_codec(const size_t i) {
         AVCodecContext *ctx = avfmt_stream_codec_context(i);
         if (ctx != NULL) {
@@ -222,6 +234,7 @@ public:
             if (!strm.codec_open) {
                 if (avcodec_open2(ctx,avcodec_find_decoder(ctx->codec_id),NULL) >= 0) {
                     fprintf(stderr,"Stream %zu codec opened\n",i);
+                    print_stream_debug(i);
                     strm.codec_open = true;
                 }
                 else {
