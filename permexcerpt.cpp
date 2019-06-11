@@ -43,6 +43,9 @@ typedef enum PROCESS_DPI_AWARENESS {
 } PROCESS_DPI_AWARENESS;
 #endif
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #include <SDL.h>
 #include <SDL_main.h>
 
@@ -154,9 +157,31 @@ bool GUI_Idle(void) {
 void audio_callback(void *userdata,Uint8* stream,int len) {
 }
 
+std::string             open_file;
+
 int main(int argc,char **argv) {
     (void)argc;
     (void)argv;
+
+    /* FIXME: This is simple, dumb. Will do more later. */
+    if (argc < 2) {
+        fprintf(stderr,"Must specify file\n");
+        return 1;
+    }
+    open_file = argv[1];
+
+    {
+        struct stat st;
+
+        if (::stat(open_file.c_str(),&st)) {
+            fprintf(stderr,"Cannot stat file, %s\n",strerror(errno));
+            return 1;
+        }
+        if (!S_ISREG(st.st_mode)) {
+            fprintf(stderr,"%s is not a file\n",open_file.c_str());
+            return 1;
+        }
+    }
 
 	av_register_all();
 	avformat_network_init();
