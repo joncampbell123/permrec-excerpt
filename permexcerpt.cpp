@@ -162,9 +162,67 @@ bool GUI_Idle(void) {
 void audio_callback(void *userdata,Uint8* stream,int len) {
 }
 
-std::string             open_file;
+class InputFile {
+public:
+    InputFile() {
+    }
+    ~InputFile() {
+        close();
+    }
+public:
+    bool open(const std::string &path) {
+        if (is_open())
+            close();
+        if (path.empty())
+            return false;
+
+        file_path = path;
+        assert(avfmt == NULL);
+        if (avformat_open_input(&avfmt,file_path.c_str(),NULL,NULL) < 0) {
+            fprintf(stderr,"avformat: failed to open input file %s\n",file_path.c_str());
+            close();
+            return false;
+        }
+
+        if (avformat_find_stream_info(avfmt,NULL) < 0)
+            fprintf(stderr,"avformat: Did not find stream info for %s\n",file_path.c_str());
+
+        av_dump_format(avfmt, 0, file_path.c_str(), 0);
+
+        return true;
+    }
+    const std::string &get_path(void) const {
+        return file_path;
+    }
+    bool is_open(void) const {
+        return open_flag;
+    }
+    void close(void) {
+        close_avformat();
+        open_flag = false;
+        file_path.clear();
+    }
+    void close_avformat(void) {
+        if (avfmt != NULL) {
+            avformat_close_input(&avfmt);
+            avfmt = NULL;
+        }
+    }
+protected:
+    std::string             file_path;
+    AVFormatContext*        avfmt = NULL;
+    bool                    open_flag = false;
+};
+
+InputFile                   in_file;
+
+InputFile &current_file(void) {
+    return in_file;
+}
 
 int main(int argc,char **argv) {
+    std::string open_file;
+
     (void)argc;
     (void)argv;
 
@@ -195,6 +253,11 @@ int main(int argc,char **argv) {
 #if defined(WIN32)
     Windows_DPI_Awareness_Init();
 #endif
+
+    if (!in_file.open(open_file)) {
+        fprintf(stderr,"Failed to open file %s\n",open_file.c_str());
+        return 1;
+    }
 
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_AUDIO) != 0) {
         fprintf(stderr,"Unable to init SDL2\n");
