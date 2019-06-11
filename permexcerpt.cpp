@@ -175,6 +175,9 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
     }
 }
 
+void do_play(void);
+void do_stop(void);
+
 bool GUI_Idle(void) {
     SDL_Event event;
 
