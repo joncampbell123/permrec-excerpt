@@ -469,6 +469,25 @@ public:
 
         return NULL;
     }
+    int find_default_stream(int type) {
+        if (avfmt != NULL) {
+            for (size_t i=0;i < avfmt_stream_count();i++) {
+                AVCodecContext *ctx = avfmt_stream_codec_context(i);
+                if (ctx != NULL) {
+                    if (ctx->codec_type == type)
+                        return int(i);
+                }
+            }
+        }
+
+        return -1;
+    }
+    int find_default_stream_audio(void) {
+        return find_default_stream(AVMEDIA_TYPE_AUDIO);
+    }
+    int find_default_stream_video(void) {
+        return find_default_stream(AVMEDIA_TYPE_VIDEO);
+    }
 protected:
     AVPacket                avpkt;
     std::vector<Stream>     streams;
