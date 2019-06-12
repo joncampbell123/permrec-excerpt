@@ -1295,7 +1295,7 @@ int main(int argc,char **argv) {
 
     SDL_PauseAudio(0);
 
-    if ((mainWindow=SDL_CreateWindow("CVEDIT",
+    if ((mainWindow=SDL_CreateWindow("Permanent Record player/clip maker",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 640, 480, SDL_WINDOW_RESIZABLE)) == NULL) {
         fprintf(stderr,"Unable to create window\n");
         return 1;
