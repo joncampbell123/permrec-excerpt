@@ -815,6 +815,23 @@ void send_audio_frame(QueueEntry &frame) {
 
         fprintf(stderr,"Audio resampler init out samples %d\n",audio_resampler_trk.d.alloc_samples);
     }
+    if (audio_resampler != NULL) {
+        int out_samp;
+
+        out_samp = swr_convert(audio_resampler,
+            /* out */
+            audio_resampler_frame->data,
+            audio_resampler_frame->nb_samples,
+            /* in */
+            const_cast<const uint8_t**>(frame.frame->data),
+            frame.frame->nb_samples);
+
+        if (out_samp >= 0) {
+        }
+        else {
+            fprintf(stderr,"Resampler failed\n");
+        }
+    }
 }
 
 void draw_video_frame(QueueEntry &frame) {
