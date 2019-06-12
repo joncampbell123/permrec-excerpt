@@ -513,6 +513,40 @@ public:
                 return NULL;
 
             AVFrame *fr = av_frame_clone(strm.frame);
+
+            // FIXME: Why does av_frame_clone/av_frame_copy() refuse to clone/copy packed audio?
+            if (fr == NULL && !av_sample_fmt_is_planar(AVSampleFormat(strm.frame->format))) {
+                AVFrame *nfr = av_frame_alloc();
+                if (nfr == NULL)
+                    return NULL;
+
+                av_frame_copy_props(nfr,strm.frame);
+                nfr->channel_layout = strm.frame->channel_layout;
+                nfr->nb_samples = strm.frame->nb_samples;
+                nfr->channels = strm.frame->channels;
+                nfr->format = strm.frame->format;
+                if (av_frame_get_buffer(nfr,64) < 0) {
+                    fprintf(stderr,"Cannot copy frame, cannot get buffer\n");
+                    av_frame_free(&nfr);
+                    return NULL;
+                }
+
+                int balign = av_get_bytes_per_sample(AVSampleFormat(nfr->format));
+                if (balign <= 0 || balign >= 64) {
+                    fprintf(stderr,"Cannot copy frame, bad block align\n");
+                    av_frame_free(&nfr);
+                    return NULL;
+                }
+
+                /* OK DO IT */
+                assert(strm.frame->data[0] != NULL);
+                assert(nfr->data[0] != NULL);
+                assert(strm.frame->nb_samples == nfr->nb_samples);
+                memcpy(nfr->data[0],strm.frame->data[0],nfr->nb_samples * nfr->channels * balign);
+
+                fr = nfr;
+            }
+
             if (fr == NULL)
                 return NULL;
 
