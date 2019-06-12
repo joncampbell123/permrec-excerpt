@@ -1520,7 +1520,6 @@ void DrawVideoFrame(void) {
 }
 
 void vga_print_char(int x,int y,const char c) {
-    fprintf(stderr,"%d,%d\n",x,y);
     if (x < 0 || (x+8) > mainSurface->w)
         return;
     if (y < 0 || (y+14) > mainSurface->h)
