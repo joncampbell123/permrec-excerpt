@@ -1590,7 +1590,7 @@ void next_stream_of_type(const int type,int &in_file_stream) {
 
         do {
             if (--patience == 0) {
-                in_file_stream = fp.find_default_stream_video();
+                in_file_stream = -1;
                 break;
             }
 
@@ -1637,14 +1637,22 @@ void recompute_start_adj(void) {
 }
 
 void next_video_stream(void) {
+    auto &fp = current_file();
+
     next_stream_of_type(AVMEDIA_TYPE_VIDEO,/*&*/in_file_video_stream);
+    if (in_file_video_stream == -1)
+        in_file_video_stream = fp.find_default_stream_video();
     recompute_start_adj();
     sdl_audio_queue_flush();
     flush_queue(video_queue);
 }
 
 void next_audio_stream(void) {
+    auto &fp = current_file();
+
     next_stream_of_type(AVMEDIA_TYPE_AUDIO,/*&*/in_file_audio_stream);
+    if (in_file_audio_stream == -1)
+        in_file_audio_stream = fp.find_default_stream_audio();
     recompute_start_adj();
     sdl_audio_queue_flush();
     flush_queue(audio_queue);
