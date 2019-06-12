@@ -911,7 +911,7 @@ unsigned int audio_queue_delay_samples(void) {
 }
 
 double audio_queue_block_delay(void) {
-    return double(audio_spec.samples) / (audio_spec.freq * 2);
+    return double(audio_spec.samples) / (audio_spec.freq * 2); // half a block
 }
 
 double audio_queue_delay(void) {
