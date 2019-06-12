@@ -1100,7 +1100,7 @@ void Play_Idle(void) {
 
         if (!audio_queue.empty()) {
             auto &ent = audio_queue.front();
-            if (audio_queue_delay() < 0.5 && play_in_time >= (ent.pt - audio_queue_block_delay() - audio_queue_delay())) {
+            if (audio_queue_delay() < 0.5 && play_in_time >= (ent.pt - audio_queue_delay())) {
                 current_audio_frame = std::move(ent);
                 audio_queue.pop();
                 current_audio_frame.update = true;
