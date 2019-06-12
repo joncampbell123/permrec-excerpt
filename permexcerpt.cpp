@@ -251,6 +251,54 @@ void audio_callback(void *userdata,Uint8* stream,int len) {
     }
 }
 
+// This function is necessary because FFMPEG av_frame_clone() and av_frame_copy() will not
+// copy packed audio or float planar audio. So we do it ourself. >:(
+AVFrame *copy_the_audio_frame_because_ffmpeg_wont_do_it_for_some_stupid_reason(AVFrame *sf) {
+    AVFrame *nfr = av_frame_alloc();
+    if (nfr == NULL)
+        return NULL;
+
+    av_frame_copy_props(nfr,sf);
+    nfr->channel_layout = sf->channel_layout;
+    nfr->nb_samples = sf->nb_samples;
+    nfr->channels = sf->channels;
+    nfr->format = sf->format;
+    if (av_frame_get_buffer(nfr,64) < 0) {
+        fprintf(stderr,"Cannot copy frame, cannot get buffer\n");
+        av_frame_free(&nfr);
+        return NULL;
+    }
+
+    int balign = av_get_bytes_per_sample(AVSampleFormat(nfr->format));
+    if (balign <= 0 || balign >= 64) {
+        fprintf(stderr,"Cannot copy frame, bad block align\n");
+        av_frame_free(&nfr);
+        return NULL;
+    }
+
+    assert(sf->nb_samples == nfr->nb_samples);
+
+    int planes = av_sample_fmt_is_planar(AVSampleFormat(nfr->format)) ? nfr->channels : 1;
+    for (int p=0;p < planes;p++) {
+        assert(sf->data[p] != NULL);
+        assert(nfr->data[p] != NULL);
+
+        if (planes != 1) {
+            memcpy(nfr->data[p],sf->data[p],
+                static_cast<unsigned int>(nfr->nb_samples) *
+                static_cast<unsigned int>(balign));
+        }
+        else {
+            memcpy(nfr->data[p],sf->data[p],
+                static_cast<unsigned int>(nfr->nb_samples) *
+                static_cast<unsigned int>(nfr->channels) *
+                static_cast<unsigned int>(balign));
+        }
+    }
+
+    return nfr;
+}
+
 class InputFile {
 public:
     class Stream {
@@ -515,42 +563,8 @@ public:
                 return NULL;
 
             AVFrame *fr = av_frame_clone(strm.frame);
-
-            // FIXME: Why does av_frame_clone/av_frame_copy() refuse to clone/copy packed audio?
-            if (fr == NULL && !av_sample_fmt_is_planar(AVSampleFormat(strm.frame->format))) {
-                AVFrame *nfr = av_frame_alloc();
-                if (nfr == NULL)
-                    return NULL;
-
-                av_frame_copy_props(nfr,strm.frame);
-                nfr->channel_layout = strm.frame->channel_layout;
-                nfr->nb_samples = strm.frame->nb_samples;
-                nfr->channels = strm.frame->channels;
-                nfr->format = strm.frame->format;
-                if (av_frame_get_buffer(nfr,64) < 0) {
-                    fprintf(stderr,"Cannot copy frame, cannot get buffer\n");
-                    av_frame_free(&nfr);
-                    return NULL;
-                }
-
-                int balign = av_get_bytes_per_sample(AVSampleFormat(nfr->format));
-                if (balign <= 0 || balign >= 64) {
-                    fprintf(stderr,"Cannot copy frame, bad block align\n");
-                    av_frame_free(&nfr);
-                    return NULL;
-                }
-
-                /* OK DO IT */
-                assert(strm.frame->data[0] != NULL);
-                assert(nfr->data[0] != NULL);
-                assert(strm.frame->nb_samples == nfr->nb_samples);
-                memcpy(nfr->data[0],strm.frame->data[0],
-                    static_cast<unsigned int>(nfr->nb_samples) *
-                    static_cast<unsigned int>(nfr->channels) *
-                    static_cast<unsigned int>(balign));
-
-                fr = nfr;
-            }
+            if (fr == NULL)
+                fr = copy_the_audio_frame_because_ffmpeg_wont_do_it_for_some_stupid_reason(strm.frame);
 
             if (fr == NULL)
                 return NULL;
