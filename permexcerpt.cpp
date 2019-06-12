@@ -242,8 +242,6 @@ void audio_callback(void *userdata,Uint8* stream,int len) {
         }
     }
 
-    fprintf(stderr,"samples left %u\n",samples);
-
     /* zero fill the rest */
     while (samples > 0) {
         for (size_t i=0;i < audio_spec.channels;i++) *dst++ = 0;
