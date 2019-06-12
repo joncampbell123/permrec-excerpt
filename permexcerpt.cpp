@@ -667,7 +667,7 @@ void draw_video_frame(QueueEntry &frame) {
     if (display_region.w <= 0 || display_region.h <= 0)
         return;
 
-    /* fit the frame */
+    /* compute the frame */
     double sw = frame.frame->width;
     double sh = frame.frame->height;
 
@@ -680,7 +680,17 @@ void draw_video_frame(QueueEntry &frame) {
         sw *= ar;
     }
 
-    fprintf(stderr,"%.3f x %.3f\n",sw,sh);
+    /* fit the frame */
+    double dh = display_region.h;
+    double dw = (dh * sw) / sh;
+
+    if (dw > display_region.w) {
+        dh = (dh * display_region.w) / dw;
+        dw = display_region.w;
+    }
+
+    fprintf(stderr,"%.3f x %.3f -> %.3f x %.3f\n",
+        sw,sh,dw,dh);
 }
 
 void Play_Idle(void) {
