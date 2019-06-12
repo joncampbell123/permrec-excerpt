@@ -393,6 +393,12 @@ typedef uint64_t us_time_t;
 
 typedef uint64_t ns_time_t;
 
+us_time_t playing_base = 0;
+double play_duration = 0;
+double play_in_base = 0;
+double play_in_time = 0;
+bool playing = false;
+
 ns_time_t monotonic_clock_ns(void) {
 	struct timespec tv;
 
@@ -409,6 +415,8 @@ us_time_t monotonic_clock_us(void) {
 int                 want_audio_rate = -1;
 int                 want_audio_channels = -1;
 
+SDL_Rect            playpos_bar = {0,0,0,0};
+SDL_Rect            playpos_thumb = {0,0,0,0};
 SDL_Rect            playpos_region = {0,0,0,0};
 SDL_Rect            display_region = {0,0,0,0};
 SDL_Rect            video_region = {0,0,0,0};
@@ -424,8 +432,25 @@ bool                gui_redraw = true;
 
 void RedrawVideoFrame(void);
 
+void PlayposBarRecomputeThumb(void) {
+    playpos_thumb = {0,0,0,0};
+
+    if (playpos_bar.w > 0) {
+        int pos_x = int((play_in_time * playpos_bar.w) / std::max(play_duration,0.1));
+        if (pos_x < 0) pos_x = 0;
+        if (pos_x > playpos_bar.w) pos_x = playpos_bar.w;
+
+        playpos_thumb.x = pos_x + playpos_bar.x - 2;
+        playpos_thumb.y = playpos_bar.y - ((playpos_region.h * 1) / 3);
+        playpos_thumb.w = 4;
+        playpos_thumb.h = 2 + (((playpos_region.h * 1) / 3) * 2);
+    }
+}
+
 void UpdateDisplayRect(void) {
     playpos_region = {0,0,0,0};
+    playpos_thumb = {0,0,0,0};
+    playpos_bar = {0,0,0,0};
 
     if (mainSurface) {
         display_region.x = 0;
@@ -439,6 +464,19 @@ void UpdateDisplayRect(void) {
             playpos_region.w = display_region.w;
             playpos_region.y = display_region.h;
             playpos_region.h = 20;
+
+            int begin_x = (1+1+2+1+2)*8;    // H:MM:SS
+                                            // 112-12-
+            int end_x = playpos_region.w - 8;
+
+            assert((begin_x + 8) < end_x);
+
+            playpos_bar.x = begin_x;
+            playpos_bar.h = 4;
+            playpos_bar.y = playpos_region.y + ((playpos_region.h - playpos_bar.h) / 2);
+            playpos_bar.w = end_x - begin_x;
+
+            PlayposBarRecomputeThumb();
         }
     }
     else {
@@ -979,12 +1017,6 @@ InputFile &current_file(void) {
     return in_file;
 }
 
-us_time_t playing_base = 0;
-double play_duration = 0;
-double play_in_base = 0;
-double play_in_time = 0;
-bool playing = false;
-
 double get_play_time_now(void) {
     if (playing) {
         play_in_time  = static_cast<double>(monotonic_clock_us());
@@ -1477,7 +1509,11 @@ void DrawPlayPos(void) {
     if (mainSurface->pixels == NULL)
         return;
 
+    PlayposBarRecomputeThumb();
+
     SDL_FillRect(mainSurface, &playpos_region, SDL_MapRGB(mainSurface->format,31,31,31));
+    SDL_FillRect(mainSurface, &playpos_bar,    SDL_MapRGB(mainSurface->format,63,63,63));
+    SDL_FillRect(mainSurface, &playpos_thumb,  SDL_MapRGB(mainSurface->format,160,160,160));
 }
 
 void next_stream_of_type(const int type,int &in_file_stream) {
