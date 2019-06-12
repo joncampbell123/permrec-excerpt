@@ -211,14 +211,43 @@ bool GUI_Idle(void) {
     return !(quitting_app);
 }
 
+static constexpr size_t sdl_audio_queue_size = 64 * 1024;
+int16_t     sdl_audio_queue[sdl_audio_queue_size];
+size_t      sdl_audio_queue_in = 0,sdl_audio_queue_out = 0;
+
+unsigned int audio_queue_delay_samples_nolock(void);
+
 void audio_callback(void *userdata,Uint8* stream,int len) {
     if (len < 0 || stream == NULL)
         return;
 
-    int16_t *dst = reinterpret_cast<int16_t*>stream;
-    unsigned int samples = static_cast<unsigned int>(len / (2 * audio_spec.channels));
+    int16_t *dst = reinterpret_cast<int16_t*>(stream);
+    unsigned int samples = static_cast<unsigned int>(len / (sizeof(int16_t) * audio_spec.channels));
 
-    if (playing) {
+    if (is_playing()) {
+        unsigned int do_samples = std::min(samples,audio_queue_delay_samples_nolock());
+        unsigned int do_count = do_samples * audio_spec.channels;
+
+        samples -= do_samples;
+        while (do_count > 0 && sdl_audio_queue_out != sdl_audio_queue_in) {
+            if (sdl_audio_queue_out == sdl_audio_queue_size)
+                sdl_audio_queue_out = 0;
+
+            assert(sdl_audio_queue_out != sdl_audio_queue_in);
+
+            do_count--;
+            *dst++ = sdl_audio_queue[sdl_audio_queue_out++];
+            if (sdl_audio_queue_out == sdl_audio_queue_size)
+                sdl_audio_queue_out = 0;
+        }
+    }
+
+    fprintf(stderr,"samples left %u\n",samples);
+
+    /* zero fill the rest */
+    while (samples > 0) {
+        for (size_t i=0;i < audio_spec.channels;i++) *dst++ = 0;
+        samples--;
     }
 }
 
@@ -956,10 +985,6 @@ void draw_video_frame(QueueEntry &frame) {
     }
 }
 
-static constexpr size_t sdl_audio_queue_size = 64 * 1024;
-int16_t     sdl_audio_queue[sdl_audio_queue_size];
-size_t      sdl_audio_queue_in = 0,sdl_audio_queue_out = 0;
-
 unsigned int audio_queue_delay_samples_nolock(void) {
     ssize_t amt;
 
@@ -985,7 +1010,7 @@ unsigned int sdl_audio_queue_write(const int16_t *audio,unsigned int samples) {
     if (samples > avail) samples = avail;
 
     if (samples != 0) {
-        unsigned int count = static_cast<unsigned int>(samples);
+        unsigned int count = static_cast<unsigned int>(samples) * audio_spec.channels;
 
         do {
             if (sdl_audio_queue_in == sdl_audio_queue_size)
