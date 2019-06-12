@@ -1589,16 +1589,16 @@ void next_stream_of_type(const int type,int &in_file_stream) {
             in_file_stream = 0;
 
         do {
-            if (--patience == 0) {
-                in_file_stream = -1;
-                break;
-            }
-
             AVStream *s = fp.avfmt_stream(size_t(in_file_stream));
             if (s != NULL) {
                 if (s->codec->codec_type == type) {
                     break;
                 }
+            }
+
+            if (--patience == 0) {
+                in_file_stream = -1;
+                break;
             }
 
             in_file_stream++;
