@@ -718,8 +718,8 @@ void draw_video_frame(QueueEntry &frame) {
 
     int ifw = int(floor(dw + 0.5));
     int ifh = int(floor(dh + 0.5));
-    if (ifw < 4) ifw = 4;
-    if (ifh < 4) ifh = 4;
+    if (ifw < 4) return;
+    if (ifh < 4) return;
 
     video_region.w = ifw;
     video_region.h = ifh;
