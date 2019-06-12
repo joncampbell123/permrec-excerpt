@@ -614,13 +614,16 @@ struct ScalerTrack {
 struct ResamplerTrack {
     int             rate = -1,channels = -1;
     uint64_t        channel_count = 0;
+    int             alloc_samples = 0;
 
     void clear(void) {
+        alloc_samples = 0;
         rate = -1,channels = -1;
         channel_count = 0;
     }
 };
 
+AVFrame*                        audio_resampler_frame = NULL;
 ResamplerTrack                  audio_resampler_trk;
 SwrContext*                     audio_resampler = NULL;
 ScalerTrack                     video_scaler_trk;
@@ -717,6 +720,7 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 }
 
 void free_audio_resampler(void) {
+    av_frame_free(&audio_resampler_frame);
     audio_resampler_trk.clear();
     swr_free(&audio_resampler);
     audio_resampler = NULL;
