@@ -430,6 +430,8 @@ bool                quitting_app = false;
 
 bool                gui_redraw = true;
 
+double              gui_redraw_at_play_time = -1;
+
 void RedrawVideoFrame(void);
 
 void PlayposBarRecomputeThumb(void) {
@@ -533,6 +535,9 @@ bool GUI_Idle(void) {
         }
     }
 
+    if (is_playing() && gui_redraw_at_play_time >= 0.0 && play_in_time >= gui_redraw_at_play_time)
+        gui_redraw = true;
+
     if (gui_redraw) {
         SDL_LockSurface(mainSurface);
 
@@ -543,6 +548,8 @@ bool GUI_Idle(void) {
         SDL_UnlockSurface(mainSurface);
         SDL_UpdateWindowSurface(mainWindow);
         gui_redraw = false;
+
+        gui_redraw_at_play_time = play_in_time + 0.1;
     }
 
     return !(quitting_app);
