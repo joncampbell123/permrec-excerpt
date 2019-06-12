@@ -690,8 +690,19 @@ void draw_video_frame(QueueEntry &frame) {
         dw = display_region.w;
     }
 
-    fprintf(stderr,"%.3f x %.3f -> %.3f x %.3f\n",
-        sw,sh,dw,dh);
+    int ifw = int(floor(dw + 0.5));
+    int ifh = int(floor(dh + 0.5));
+    if (ifw < 4) ifw = 4;
+    if (ifh < 4) ifh = 4;
+
+    video_region.w = ifw;
+    video_region.h = ifh;
+    video_region.x = (display_region.w - ifw) / 2;
+    video_region.y = (display_region.h - ifh) / 2;
+    assert(video_region.x >= 0);
+    assert(video_region.y >= 0);
+    assert((video_region.x+video_region.w) <= display_region.w);
+    assert((video_region.y+video_region.h) <= display_region.h);
 }
 
 void Play_Idle(void) {
