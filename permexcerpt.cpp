@@ -1566,7 +1566,7 @@ void DrawPlayPos(void) {
     SDL_FillRect(mainSurface, &playpos_thumb,  SDL_MapRGB(mainSurface->format,160,160,160));
 
     if (playpos_time.w > 0 && playpos_time.h > 0) {
-        int cs = int(floor(play_in_time + 0.01));
+        int cs = int(floor((play_in_time * 100) + 0.01));
         int cent = cs % 100; cs /= 100;
         int sec = cs % 60; cs /= 60;
         int min = cs % 60; cs /= 60;
