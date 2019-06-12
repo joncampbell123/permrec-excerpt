@@ -416,6 +416,7 @@ int                 want_audio_rate = -1;
 int                 want_audio_channels = -1;
 
 SDL_Rect            playpos_bar = {0,0,0,0};
+SDL_Rect            playpos_time = {0,0,0,0};
 SDL_Rect            playpos_thumb = {0,0,0,0};
 SDL_Rect            playpos_region = {0,0,0,0};
 SDL_Rect            display_region = {0,0,0,0};
@@ -436,11 +437,17 @@ void RedrawVideoFrame(void);
 
 void PlayposBarRecomputeThumb(void) {
     playpos_thumb = {0,0,0,0};
+    playpos_time = {0,0,0,0};
 
     if (playpos_bar.w > 0) {
         int pos_x = int((play_in_time * playpos_bar.w) / std::max(play_duration,0.1));
         if (pos_x < 0) pos_x = 0;
         if (pos_x > playpos_bar.w) pos_x = playpos_bar.w;
+
+        playpos_time.x = 8;
+        playpos_time.w = playpos_bar.x - playpos_time.x;
+        playpos_time.h = 14;
+        playpos_time.y = ((playpos_bar.h - playpos_time.h) / 2) + playpos_bar.y;
 
         playpos_thumb.x = pos_x + playpos_bar.x - 2;
         playpos_thumb.y = playpos_bar.y - ((playpos_region.h * 1) / 3);
@@ -467,8 +474,8 @@ void UpdateDisplayRect(void) {
             playpos_region.y = display_region.h;
             playpos_region.h = 20;
 
-            int begin_x = (1+1+2+1+2)*8;    // H:MM:SS
-                                            // 112-12-
+            int begin_x = (1+1+1+2+1+2+1+2)*8;      //  H:MM:SS.CC
+                                                    // 1112-12-12-
             int end_x = playpos_region.w - 8;
 
             assert((begin_x + 8) < end_x);
@@ -1512,7 +1519,42 @@ void DrawVideoFrame(void) {
     draw_video_frame(current_video_frame);
 }
 
+void vga_print_char(int x,int y,const char c) {
+    fprintf(stderr,"%d,%d\n",x,y);
+    if (x < 0 || (x+8) > mainSurface->w)
+        return;
+    if (y < 0 || (y+14) > mainSurface->h)
+        return;
+    if (mainSurface->pixels == NULL)
+        return;
+
+    if (mainSurface->format->BytesPerPixel == 4) {
+        unsigned char *fnt = vga_8x14_font + (static_cast<unsigned char>(c) * 14u);
+        uint32_t fg = SDL_MapRGB(mainSurface->format,127,127,127);
+        for (unsigned int py=0;py < 14;py++) {
+            uint32_t *dst = reinterpret_cast<uint32_t*>((char*)mainSurface->pixels + (4*x) + (mainSurface->pitch*(y+py)));
+            unsigned char bmp = fnt[py];
+            for (unsigned int px=0;px < 8;px++) {
+                if (bmp & 0x80) *dst = fg;
+                dst++;
+                bmp <<= 1u;
+            }
+        }
+    }
+}
+
+void vga_print_font(int x,int y,const char *str) {
+    char c;
+
+    while ((c = *str++) != 0) {
+        vga_print_char(x,y,c);
+        x += 8;
+    }
+}
+
 void DrawPlayPos(void) {
+    char tmp[80];
+
     if (playpos_region.w == 0 || playpos_region.h == 0)
         return;
     if (mainSurface->pixels == NULL)
@@ -1523,6 +1565,17 @@ void DrawPlayPos(void) {
     SDL_FillRect(mainSurface, &playpos_region, SDL_MapRGB(mainSurface->format,31,31,31));
     SDL_FillRect(mainSurface, &playpos_bar,    SDL_MapRGB(mainSurface->format,63,63,63));
     SDL_FillRect(mainSurface, &playpos_thumb,  SDL_MapRGB(mainSurface->format,160,160,160));
+
+    if (playpos_time.w > 0 && playpos_time.h > 0) {
+        int cs = int(floor(play_in_time + 0.01));
+        int cent = cs % 100; cs /= 100;
+        int sec = cs % 60; cs /= 60;
+        int min = cs % 60; cs /= 60;
+        int h = cs;
+
+        sprintf(tmp,"%u:%02u:%02u.%02u",h,min,sec,cent);
+        vga_print_font(playpos_time.x,playpos_time.y,tmp);
+    }
 }
 
 void next_stream_of_type(const int type,int &in_file_stream) {
