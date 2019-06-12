@@ -741,9 +741,7 @@ void free_video_scaler(void) {
     video_scaler = NULL;
 }
 
-int sdl_audio_queue_write(const int16_t *audio,int samples) {
-    return samples;//TODO
-}
+int sdl_audio_queue_write(const int16_t *audio,int samples);
 
 void send_audio_frame(QueueEntry &frame) {
     if (frame.frame == NULL)
@@ -954,18 +952,29 @@ static constexpr size_t sdl_audio_queue_size = 1024 * 1024;
 int16_t     sdl_audio_queue[sdl_audio_queue_size];
 size_t      sdl_audio_queue_in = 0,sdl_audio_queue_out = 0;
 
-unsigned int audio_queue_delay_samples(void) {
+unsigned int audio_queue_delay_samples_nolock(void) {
     ssize_t amt;
 
-    SDL_LockAudio();
     amt = static_cast<ssize_t>(sdl_audio_queue_in);
     amt -= static_cast<ssize_t>(sdl_audio_queue_out);
     if (amt < 0) amt += static_cast<ssize_t>(sdl_audio_queue_size);
     if (amt < 0) amt = 0;
     if (amt > static_cast<ssize_t>(sdl_audio_queue_size)) amt = static_cast<ssize_t>(sdl_audio_queue_size);
-    SDL_UnlockAudio();
 
     return static_cast<unsigned int>(amt / audio_spec.channels);
+}
+
+int sdl_audio_queue_write(const int16_t *audio,int samples) {
+    return samples;//TODO
+}
+
+unsigned int audio_queue_delay_samples(void) {
+    unsigned int r;
+
+    SDL_LockAudio();
+    r = audio_queue_delay_samples_nolock();
+    SDL_UnlockAudio();
+    return r;
 }
 
 double audio_queue_block_delay(void) {
