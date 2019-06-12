@@ -571,6 +571,7 @@ struct QueueEntry {
     bool                    done = false;
     AVFrame*                frame = NULL;
     double                  pt = 0;
+    AVRational              container_ar = {0,0};
 };
 
 QueueEntry                      current_video_frame;
@@ -587,8 +588,9 @@ void flush_queue(void) {
     flush_queue(audio_queue);
 }
 
-bool schedule_video_frame(double pt,AVFrame *fr) {
+bool schedule_video_frame(double pt,AVFrame *fr,AVStream *avs) {
     QueueEntry ent;
+    if (avs->sample_aspect_ratio.num > 0) ent.container_ar = avs->sample_aspect_ratio;
     ent.frame = fr;
     ent.pt = pt;
     video_queue.push(std::move(ent));
@@ -622,7 +624,7 @@ bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 
         video_last_next_pts = pts + fr->pkt_duration;
 
-        if (!schedule_video_frame(pt,fr))
+        if (!schedule_video_frame(pt,fr,avs))
             return false;
 
         return true;
@@ -669,8 +671,11 @@ void draw_video_frame(QueueEntry &frame) {
     double sw = frame.frame->width;
     double sh = frame.frame->height;
 
-    // todo: AVStream
-    if (frame.frame->sample_aspect_ratio.num > 0 && frame.frame->sample_aspect_ratio.den > 0) {
+    if (frame.container_ar.num > 0 && frame.container_ar.den > 0) {
+        double ar = double(frame.container_ar.num) / frame.container_ar.den;
+        sw *= ar;
+    }
+    else if (frame.frame->sample_aspect_ratio.num > 0 && frame.frame->sample_aspect_ratio.den > 0) {
         double ar = double(frame.frame->sample_aspect_ratio.num) / frame.frame->sample_aspect_ratio.den;
         sw *= ar;
     }
