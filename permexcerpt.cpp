@@ -218,11 +218,13 @@ size_t      sdl_audio_queue_in = 0,sdl_audio_queue_out = 0;
 unsigned int audio_queue_delay_samples_nolock(void);
 
 void audio_callback(void *userdata,Uint8* stream,int len) {
+    (void)userdata;
+
     if (len < 0 || stream == NULL)
         return;
 
     int16_t *dst = reinterpret_cast<int16_t*>(stream);
-    unsigned int samples = static_cast<unsigned int>(len / (sizeof(int16_t) * audio_spec.channels));
+    unsigned int samples = static_cast<unsigned int>(len) / (static_cast<unsigned int>(sizeof(int16_t)) * static_cast<unsigned int>(audio_spec.channels));
 
     if (is_playing()) {
         unsigned int do_samples = std::min(samples,audio_queue_delay_samples_nolock());
@@ -542,7 +544,10 @@ public:
                 assert(strm.frame->data[0] != NULL);
                 assert(nfr->data[0] != NULL);
                 assert(strm.frame->nb_samples == nfr->nb_samples);
-                memcpy(nfr->data[0],strm.frame->data[0],nfr->nb_samples * nfr->channels * balign);
+                memcpy(nfr->data[0],strm.frame->data[0],
+                    static_cast<unsigned int>(nfr->nb_samples) *
+                    static_cast<unsigned int>(nfr->channels) *
+                    static_cast<unsigned int>(balign));
 
                 fr = nfr;
             }
@@ -746,6 +751,8 @@ bool schedule_audio_frame(double pt,AVFrame *fr) {
 
 int64_t video_last_next_pts = AV_NOPTS_VALUE;
 bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
+    (void)pkt;
+
     {
         double pt;
         int64_t pts = video_last_next_pts;
@@ -774,6 +781,8 @@ bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 
 int64_t audio_last_next_pts = AV_NOPTS_VALUE;
 bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
+    (void)pkt;
+
     {
         double pt;
         int64_t pts = audio_last_next_pts;
