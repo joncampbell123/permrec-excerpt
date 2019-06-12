@@ -1210,12 +1210,29 @@ void next_stream_of_type(const int type,int &in_file_stream) {
     }
 }
 
+void recompute_start_adj(void) {
+    auto &fp = current_file();
+    double vs = 0,as = 0;
+
+    if (in_file_video_stream >= 0)
+        vs = fp.stream_start_time(size_t(in_file_video_stream));
+    if (in_file_audio_stream >= 0)
+        as = fp.stream_start_time(size_t(in_file_audio_stream));
+
+    double fas = std::min(vs,as);
+    fp.set_adj(fas);
+
+    fprintf(stderr,"Start compute: as=%.3f vs=%.3f min=%.3f\n",as,vs,fas);
+}
+
 void next_video_stream(void) {
     next_stream_of_type(AVMEDIA_TYPE_VIDEO,/*&*/in_file_video_stream);
+    recompute_start_adj();
 }
 
 void next_audio_stream(void) {
     next_stream_of_type(AVMEDIA_TYPE_AUDIO,/*&*/in_file_audio_stream);
+    recompute_start_adj();
 }
 
 void Play_Idle(void) {
@@ -1334,6 +1351,8 @@ int main(int argc,char **argv) {
     in_file_video_stream = in_file.find_default_stream_video();
     fprintf(stderr,"Duration: %.3f\n",play_duration);
     fprintf(stderr,"Chose audio stream %d, video stream %d\n",in_file_audio_stream,in_file_video_stream);
+
+    recompute_start_adj();
 
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_AUDIO) != 0) {
         fprintf(stderr,"Unable to init SDL2\n");
