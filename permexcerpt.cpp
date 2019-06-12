@@ -322,6 +322,7 @@ public:
     public:
         bool            codec_open = false;
         AVFrame*        frame = NULL;
+        int64_t         ts_adj = 0;
     };
 public:
     InputFile() {
@@ -352,6 +353,36 @@ public:
 
         print_fmt_debug();
         open_stream_codecs();
+
+        /* pick the smallest start time */
+        {
+            double st = 0;
+            bool nost = false;
+
+            for (size_t i=0;i < avfmt_stream_count();i++) {
+                AVStream *s = avfmt_stream(i);
+                if (s != NULL && s->start_time != AV_NOPTS_VALUE) {
+                    double t = (double(s->start_time) * s->time_base.num) / s->time_base.den;
+
+                    if (nost) {
+                        if (st > t)
+                            st = t;
+                    }
+                    else {
+                        nost = true;
+                        st = t;
+                    }
+                }
+            }
+
+            fprintf(stderr,"Min time %.3f\n",st);
+
+            for (size_t i=0;i < avfmt_stream_count();i++) {
+                AVStream *s = avfmt_stream(i);
+                Stream &si = stream(i);
+                si.ts_adj = -int64_t((st * s->time_base.den) / s->time_base.num);
+            }
+        }
 
         open_flag = true;
         return true;
