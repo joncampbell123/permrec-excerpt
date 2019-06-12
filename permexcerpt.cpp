@@ -211,7 +211,7 @@ bool GUI_Idle(void) {
     return !(quitting_app);
 }
 
-static constexpr size_t sdl_audio_queue_size = 64 * 1024;
+static constexpr size_t sdl_audio_queue_size = 128 * 1024 * 6;
 int16_t     sdl_audio_queue[sdl_audio_queue_size];
 size_t      sdl_audio_queue_in = 0,sdl_audio_queue_out = 0;
 
