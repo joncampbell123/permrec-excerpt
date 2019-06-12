@@ -543,14 +543,39 @@ void do_stop(void) {
     }
 }
 
+bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
+    return false;
+}
+
+bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
+    return false;
+}
+
 void Play_Idle(void) {
+    unsigned int ft;
+    AVFrame *fr = NULL;
     auto &fp = current_file();
 
     if (is_playing()) {
         if (fp.is_open()) {
             AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
             if (pkt != NULL) {
-                // TODO
+                if (pkt->stream_index == in_file_video_stream) {
+                    fr = in_file.decode_frame(pkt,/*&*/ft);
+                    if (fr != NULL) {
+                        if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                            av_frame_free(&fr);
+                        }
+                    }
+                }
+                else if (pkt->stream_index == in_file_audio_stream) {
+                    fr = in_file.decode_frame(pkt,/*&*/ft);
+                    if (fr != NULL) {
+                        if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                            av_frame_free(&fr);
+                        }
+                    }
+                }
             }
             else if (in_file.is_eof()) {
                 // TODO if all frames played
