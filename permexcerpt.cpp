@@ -474,8 +474,13 @@ public:
                 return NULL;
             }
 
+            /* some codecs re-use the buffers, so storing the AVFrame doesn't help */
+            AVFrame *fr_copy = av_frame_clone(fr);
+            av_frame_free(&fr);
+            if (fr_copy == NULL) return NULL;
+
             ft = static_cast<unsigned int>(avc->codec_type);
-            return fr;
+            return fr_copy;
         }
 
         return NULL;
