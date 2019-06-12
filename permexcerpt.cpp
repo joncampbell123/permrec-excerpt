@@ -455,7 +455,7 @@ public:
             return fr;
         }
         else if (avc->codec_type == AVMEDIA_TYPE_AUDIO) {
-             AVFrame *fr = av_frame_alloc();
+            AVFrame *fr = av_frame_alloc();
             if (fr == NULL) return NULL;
 
             rd = avcodec_decode_audio4(avc,fr,&got_frame,pkt);
