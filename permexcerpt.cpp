@@ -174,6 +174,7 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
     if (wevent.event == SDL_WINDOWEVENT_RESIZED) {
         mainSurface = SDL_GetWindowSurface(mainWindow);
         assert(mainSurface != NULL);
+        UpdateDisplayRect();
     }
 }
 
