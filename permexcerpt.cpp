@@ -508,14 +508,15 @@ public:
             return fr;
         }
         else if (avc->codec_type == AVMEDIA_TYPE_AUDIO) {
-            // NTS: av_frame_clone doesn't work with audio for some reason
-            AVFrame *fr = av_frame_alloc();
+            if (!strm.open()) return NULL;
 
-            rd = avcodec_decode_audio4(avc,fr,&got_frame,pkt);
-            if (rd < 0 || !got_frame || fr->nb_samples == 0) {
-                av_frame_free(&fr);
+            rd = avcodec_decode_audio4(avc,strm.frame,&got_frame,pkt);
+            if (rd < 0 || !got_frame || strm.frame->nb_samples == 0)
                 return NULL;
-            }
+
+            AVFrame *fr = av_frame_clone(strm.frame);
+            if (fr == NULL)
+                return NULL;
 
             ft = static_cast<unsigned int>(avc->codec_type);
             return fr;
