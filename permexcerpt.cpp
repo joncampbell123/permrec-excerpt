@@ -1531,12 +1531,13 @@ void vga_print_char(int x,int y,const char c) {
         unsigned char *fnt = vga_8x14_font + (static_cast<unsigned char>(c) * 14u);
         uint32_t fg = SDL_MapRGB(mainSurface->format,127,127,127);
         for (unsigned int py=0;py < 14;py++) {
-            uint32_t *dst = reinterpret_cast<uint32_t*>((char*)mainSurface->pixels + (4*x) + (mainSurface->pitch*(y+py)));
+            uint32_t *dst = reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(mainSurface->pixels) + (4*x) +
+                (static_cast<unsigned int>(mainSurface->pitch)*(static_cast<unsigned int>(y)+py)));
             unsigned char bmp = fnt[py];
             for (unsigned int px=0;px < 8;px++) {
                 if (bmp & 0x80) *dst = fg;
                 dst++;
-                bmp <<= 1u;
+                bmp = static_cast<unsigned char>(bmp << 1u);
             }
         }
     }
