@@ -239,6 +239,13 @@ size_t      sdl_audio_queue_in = 0,sdl_audio_queue_out = 0;
 
 unsigned int audio_queue_delay_samples_nolock(void);
 
+void sdl_audio_queue_flush(void) {
+    SDL_LockAudio();
+    sdl_audio_queue_in = 0;
+    sdl_audio_queue_out = 0;
+    SDL_UnlockAudio();
+}
+
 void audio_callback(void *userdata,Uint8* stream,int len) {
     (void)userdata;
 
@@ -377,6 +384,13 @@ public:
     void set_adj(double min_t) {
         for (size_t i=0;i < avfmt_stream_count();i++) {
             AVStream *s = avfmt_stream(i);
+            Stream &si = stream(i);
+            si.ts_adj = -int64_t((min_t * s->time_base.den) / s->time_base.num);
+        }
+    }
+    void set_stream_adj(double min_t,const size_t i) {
+        AVStream *s = avfmt_stream(i);
+        if (s != NULL) {
             Stream &si = stream(i);
             si.ts_adj = -int64_t((min_t * s->time_base.den) / s->time_base.num);
         }
@@ -1219,8 +1233,21 @@ void recompute_start_adj(void) {
     if (in_file_audio_stream >= 0)
         as = fp.stream_start_time(size_t(in_file_audio_stream));
 
-    double fas = std::min(vs,as);
-    fp.set_adj(fas);
+    double fas;
+
+    if (fabs(vs-as) < 1.0) {
+        fas = std::min(vs,as);
+        fp.set_adj(fas);
+    }
+    else {
+        fprintf(stderr,"audio/video start are too far apart\n");
+        fas = std::min(vs,as);
+        fp.set_adj(fas);
+        if (in_file_video_stream >= 0)
+            fp.set_stream_adj(vs,size_t(in_file_video_stream));
+        if (in_file_audio_stream >= 0)
+            fp.set_stream_adj(as,size_t(in_file_audio_stream));
+    }
 
     fprintf(stderr,"Start compute: as=%.3f vs=%.3f min=%.3f\n",as,vs,fas);
 }
@@ -1228,11 +1255,13 @@ void recompute_start_adj(void) {
 void next_video_stream(void) {
     next_stream_of_type(AVMEDIA_TYPE_VIDEO,/*&*/in_file_video_stream);
     recompute_start_adj();
+    sdl_audio_queue_flush();
 }
 
 void next_audio_stream(void) {
     next_stream_of_type(AVMEDIA_TYPE_AUDIO,/*&*/in_file_audio_stream);
     recompute_start_adj();
+    sdl_audio_queue_flush();
 }
 
 void Play_Idle(void) {
