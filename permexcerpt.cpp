@@ -728,6 +728,20 @@ void draw_video_frame(QueueEntry &frame) {
     assert((video_region.x+video_region.w) <= display_region.w);
     assert((video_region.y+video_region.h) <= display_region.h);
 
+    if (video_scaler != NULL) {
+        if (video_scaler_trk.sw != frame.frame->width ||
+            video_scaler_trk.sh != frame.frame->height ||
+            video_scaler_trk.sf != AVPixelFormat(frame.frame->format) ||
+            video_scaler_trk.dw != video_region.w ||
+            video_scaler_trk.dh != video_region.h ||
+            video_scaler_trk.df != AVPixelFormat(AV_PIX_FMT_BGRA)) {
+            fprintf(stderr,"Scaler change\n");
+            video_scaler_trk.clear();
+            sws_freeContext(video_scaler);
+            video_scaler = NULL;
+        }
+    }
+
     if (video_scaler == NULL) {
         video_scaler = sws_getContext(
             // source
@@ -750,6 +764,7 @@ void draw_video_frame(QueueEntry &frame) {
         video_scaler_trk.dw = video_region.w;
         video_scaler_trk.dh = video_region.h;
         video_scaler_trk.df = AVPixelFormat(AV_PIX_FMT_BGRA);
+        fprintf(stderr,"Scaler init\n");
     }
 }
 
