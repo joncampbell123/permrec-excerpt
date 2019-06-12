@@ -906,8 +906,22 @@ void draw_video_frame(QueueEntry &frame) {
     }
 }
 
+static constexpr size_t sdl_audio_queue_size = 1024 * 1024;
+int16_t     sdl_audio_queue[sdl_audio_queue_size];
+size_t      sdl_audio_queue_in = 0,sdl_audio_queue_out = 0;
+
 unsigned int audio_queue_delay_samples(void) {
-    return 0;
+    ssize_t amt;
+
+    SDL_LockAudio();
+    amt = static_cast<ssize_t>(sdl_audio_queue_in);
+    amt -= static_cast<ssize_t>(sdl_audio_queue_out);
+    if (amt < 0) amt += static_cast<ssize_t>(sdl_audio_queue_size);
+    if (amt < 0) amt = 0;
+    if (amt > static_cast<ssize_t>(sdl_audio_queue_size)) amt = static_cast<ssize_t>(sdl_audio_queue_size);
+    SDL_UnlockAudio();
+
+    return static_cast<unsigned int>(amt / audio_spec.channels);
 }
 
 double audio_queue_block_delay(void) {
@@ -971,7 +985,7 @@ void Play_Idle(void) {
 
         if (!audio_queue.empty()) {
             auto &ent = audio_queue.front();
-            if (play_in_time >= (ent.pt - audio_queue_block_delay() - audio_queue_delay())) {
+            if (audio_queue_delay() < 0.5 && play_in_time >= (ent.pt - audio_queue_block_delay() - audio_queue_delay())) {
                 current_audio_frame = std::move(ent);
                 audio_queue.pop();
                 current_audio_frame.update = true;
