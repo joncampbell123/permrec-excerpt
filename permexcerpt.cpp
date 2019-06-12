@@ -66,6 +66,7 @@ typedef enum PROCESS_DPI_AWARENESS {
 #include <string>
 #include <array>
 #include <queue>
+#include <map>
 
 extern "C" {
 #include <libavutil/opt.h>
@@ -543,12 +544,55 @@ void do_stop(void) {
     }
 }
 
+struct QueueEntry {
+    QueueEntry() {
+    }
+    QueueEntry(const QueueEntry &ent) = delete;
+    QueueEntry(QueueEntry &&ent) {
+        frame = ent.frame; ent.frame = NULL;
+        pt = ent.pt; ent.pt = 0;
+    }
+    ~QueueEntry() {
+        free();
+    }
+    void free(void) {
+        free_frame();
+    }
+    void free_frame(void) {
+        av_frame_free(&frame);
+    }
+    AVFrame*                frame = NULL;
+    double                  pt = 0;
+};
+
+std::queue<QueueEntry>          video_queue;
+std::queue<QueueEntry>          audio_queue;
+
+void flush_queue(queue<QueueEntry> &m) {
+    while (!m.empty()) m.pop();
+}
+
+void flush_queue(void) {
+    flush_queue(video_queue);
+    flush_queue(audio_queue);
+}
+
 bool schedule_video_frame(double pt,AVFrame *fr) {
-    return false;
+    QueueEntry ent;
+    ent.frame = fr;
+    ent.pt = pt;
+    video_queue.push(std::move(ent));
+    fprintf(stderr,"Queued video frame pt=%.3f\n",pt);
+    return true;
 }
 
 bool schedule_audio_frame(double pt,AVFrame *fr) {
-    return false;
+    QueueEntry ent;
+    ent.frame = fr;
+    ent.pt = pt;
+    audio_queue.push(std::move(ent));
+    fprintf(stderr,"Queued audio frame pt=%.3f\n",pt);
+    return true;
 }
 
 int64_t video_last_next_pts = AV_NOPTS_VALUE;
@@ -736,6 +780,7 @@ int main(int argc,char **argv) {
         GUI_Idle();
     }
     do_stop();
+    flush_queue();
 
     SDL_DestroyWindow(mainWindow);
     SDL_CloseAudio();
