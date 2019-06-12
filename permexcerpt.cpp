@@ -545,7 +545,7 @@ void do_stop(void) {
 
 int64_t video_last_next_pts = AV_NOPTS_VALUE;
 bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
-    if (playing) {
+    {
         double pt;
         int64_t pts = video_last_next_pts;
         if (fr->pts != AV_NOPTS_VALUE)
@@ -567,7 +567,7 @@ bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 
 int64_t audio_last_next_pts = AV_NOPTS_VALUE;
 bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
-    if (playing) {
+    {
         double pt;
         int64_t pts = audio_last_next_pts;
         if (fr->pts != AV_NOPTS_VALUE)
