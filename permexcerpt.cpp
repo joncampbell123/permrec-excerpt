@@ -1044,6 +1044,7 @@ void do_play(void) {
         fprintf(stderr,"Playing\n");
         playing_base = monotonic_clock_us();
         play_in_base = play_in_time;
+        gui_redraw = true;
         playing = true;
     }
 }
@@ -1054,6 +1055,7 @@ void do_stop(void) {
         get_play_time_now();
         playing_base = monotonic_clock_us();
         play_in_base = play_in_time;
+        gui_redraw = true;
         playing = false;
     }
 }
