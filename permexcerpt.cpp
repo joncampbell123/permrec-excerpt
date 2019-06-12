@@ -704,7 +704,7 @@ public:
     double stream_start_time(const size_t i) {
         if (i < avfmt_stream_count()) {
             AVStream *s = avfmt_stream(i);
-            if (s != NULL)
+            if (s != NULL && s->start_time != AV_NOPTS_VALUE)
                 return (double(s->start_time) * s->time_base.num) / s->time_base.den;
         }
 
