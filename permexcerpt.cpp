@@ -183,6 +183,8 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
     }
 }
 
+void next_video_stream(void);
+void next_audio_stream(void);
 void DrawVideoFrame(void);
 bool is_playing(void);
 void do_play(void);
@@ -207,6 +209,12 @@ bool GUI_Idle(void) {
                     do_stop();
                 else
                     do_play();
+            }
+            else if (event.key.keysym.sym == SDLK_v) {
+                next_video_stream();
+            }
+            else if (event.key.keysym.sym == SDLK_a) {
+                next_audio_stream();
             }
         }
     }
@@ -357,6 +365,22 @@ public:
 
         return d;
     }
+    double stream_start_time(const size_t i) {
+        if (i < avfmt_stream_count()) {
+            AVStream *s = avfmt_stream(i);
+            if (s != NULL)
+                return (double(s->start_time) * s->time_base.num) / s->time_base.den;
+        }
+
+        return 0;
+    }
+    void set_adj(double min_t) {
+        for (size_t i=0;i < avfmt_stream_count();i++) {
+            AVStream *s = avfmt_stream(i);
+            Stream &si = stream(i);
+            si.ts_adj = -int64_t((min_t * s->time_base.den) / s->time_base.num);
+        }
+    }
     bool open(const std::string &path) {
         if (is_open())
             close();
@@ -380,35 +404,8 @@ public:
         print_fmt_debug();
         open_stream_codecs();
 
-        /* pick the smallest start time */
-        {
-            double st = 0;
-            bool nost = false;
-
-            for (size_t i=0;i < avfmt_stream_count();i++) {
-                AVStream *s = avfmt_stream(i);
-                if (s != NULL && s->start_time != AV_NOPTS_VALUE) {
-                    double t = (double(s->start_time) * s->time_base.num) / s->time_base.den;
-
-                    if (nost) {
-                        if (st > t)
-                            st = t;
-                    }
-                    else {
-                        nost = true;
-                        st = t;
-                    }
-                }
-            }
-
-            fprintf(stderr,"Min time %.3f\n",st);
-
-            for (size_t i=0;i < avfmt_stream_count();i++) {
-                AVStream *s = avfmt_stream(i);
-                Stream &si = stream(i);
-                si.ts_adj = -int64_t((st * s->time_base.den) / s->time_base.num);
-            }
-        }
+        for (size_t i=0;i < avfmt_stream_count();i++)
+            stream(i).ts_adj = 0;
 
         open_flag = true;
         return true;
@@ -1181,6 +1178,44 @@ double audio_queue_delay(void) {
 
 void DrawVideoFrame(void) {
     draw_video_frame(current_video_frame);
+}
+
+void next_stream_of_type(const int type,int &in_file_stream) {
+    auto &fp = current_file();
+
+    if (fp.is_open() && in_file_stream >= 0 && fp.avfmt_stream_count() != 0) {
+        size_t patience = fp.avfmt_stream_count();
+
+        in_file_stream++;
+        if (size_t(in_file_stream) >= fp.avfmt_stream_count())
+            in_file_stream = 0;
+
+        do {
+            if (--patience == 0) {
+                in_file_stream = fp.find_default_stream_video();
+                break;
+            }
+
+            AVStream *s = fp.avfmt_stream(size_t(in_file_stream));
+            if (s != NULL) {
+                if (s->codec->codec_type == type) {
+                    break;
+                }
+            }
+
+            in_file_stream++;
+            if (size_t(in_file_stream) >= fp.avfmt_stream_count())
+                in_file_stream = 0;
+        } while(1);
+    }
+}
+
+void next_video_stream(void) {
+    next_stream_of_type(AVMEDIA_TYPE_VIDEO,/*&*/in_file_video_stream);
+}
+
+void next_audio_stream(void) {
+    next_stream_of_type(AVMEDIA_TYPE_AUDIO,/*&*/in_file_audio_stream);
 }
 
 void Play_Idle(void) {
