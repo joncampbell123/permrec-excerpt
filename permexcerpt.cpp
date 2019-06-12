@@ -568,11 +568,15 @@ struct QueueEntry {
     }
     QueueEntry(const QueueEntry &ent) = delete;
     QueueEntry(QueueEntry &&ent) {
+        free();
+
         frame = ent.frame; ent.frame = NULL;
         pt = ent.pt; ent.pt = 0;
     }
     QueueEntry& operator=(QueueEntry &ent) = delete;
     QueueEntry& operator=(QueueEntry &&ent) {
+        free();
+
         frame = ent.frame; ent.frame = NULL;
         pt = ent.pt; ent.pt = 0;
         return *this;
