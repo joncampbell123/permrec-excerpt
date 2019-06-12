@@ -543,11 +543,47 @@ void do_stop(void) {
     }
 }
 
+int64_t video_last_next_pts = AV_NOPTS_VALUE;
 bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
+    if (playing) {
+        double pt;
+        int64_t pts = video_last_next_pts;
+        if (fr->pts != AV_NOPTS_VALUE)
+            pts = fr->pts;
+        if (pts == AV_NOPTS_VALUE && fr->pkt_dts != AV_NOPTS_VALUE)
+            pts = fr->pkt_dts;
+
+        if (pts != AV_NOPTS_VALUE)
+            pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
+        else
+            pt = get_play_time_now();
+
+        if (pts != AV_NOPTS_VALUE)
+            video_last_next_pts = pts + pkt->duration;
+    }
+
     return false;
 }
 
+int64_t audio_last_next_pts = AV_NOPTS_VALUE;
 bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
+    if (playing) {
+        double pt;
+        int64_t pts = audio_last_next_pts;
+        if (fr->pts != AV_NOPTS_VALUE)
+            pts = fr->pts;
+        if (pts == AV_NOPTS_VALUE && fr->pkt_dts != AV_NOPTS_VALUE)
+            pts = fr->pkt_dts;
+
+        if (pts != AV_NOPTS_VALUE)
+            pt = (double(pts) * avs->time_base.num) / avs->time_base.den;
+        else
+            pt = get_play_time_now();
+
+        if (pts != AV_NOPTS_VALUE)
+            audio_last_next_pts = pts + pkt->duration;
+    }
+
     return false;
 }
 
