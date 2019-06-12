@@ -741,7 +741,7 @@ void free_video_scaler(void) {
     video_scaler = NULL;
 }
 
-int sdl_audio_queue_write(const int16_t *audio,int samples);
+unsigned int sdl_audio_queue_write(const int16_t *audio,unsigned int samples);
 
 void send_audio_frame(QueueEntry &frame) {
     if (frame.frame == NULL)
@@ -830,7 +830,7 @@ void send_audio_frame(QueueEntry &frame) {
 
         if (out_samp >= 0) {
             assert(audio_resampler_frame->data[0] != NULL);
-            if (sdl_audio_queue_write(reinterpret_cast<int16_t*>(audio_resampler_frame->data[0]),out_samp) != out_samp)
+            if (sdl_audio_queue_write(reinterpret_cast<int16_t*>(audio_resampler_frame->data[0]),static_cast<unsigned int>(out_samp)) != static_cast<unsigned int>(out_samp))
                 fprintf(stderr,"Not all samples written\n");
         }
         else {
@@ -948,7 +948,7 @@ void draw_video_frame(QueueEntry &frame) {
     }
 }
 
-static constexpr size_t sdl_audio_queue_size = 1024 * 1024;
+static constexpr size_t sdl_audio_queue_size = 64 * 1024;
 int16_t     sdl_audio_queue[sdl_audio_queue_size];
 size_t      sdl_audio_queue_in = 0,sdl_audio_queue_out = 0;
 
@@ -964,8 +964,36 @@ unsigned int audio_queue_delay_samples_nolock(void) {
     return static_cast<unsigned int>(amt / audio_spec.channels);
 }
 
-int sdl_audio_queue_write(const int16_t *audio,int samples) {
-    return samples;//TODO
+unsigned int sdl_audio_queue_write(const int16_t *audio,unsigned int samples) {
+    unsigned int full,avail;
+
+    SDL_LockAudio();
+    full = audio_queue_delay_samples_nolock();
+    avail = static_cast<unsigned int>(sdl_audio_queue_size / audio_spec.channels);
+    if (avail < full) avail = full; // avoid negative numbers in following line
+    avail -= full;
+    if (avail != 0) avail--;
+
+    if (samples > avail) samples = avail;
+
+    if (samples != 0) {
+        unsigned int count = static_cast<unsigned int>(samples);
+
+        do {
+            if (sdl_audio_queue_in == sdl_audio_queue_size)
+                sdl_audio_queue_in = 0;
+
+            sdl_audio_queue[sdl_audio_queue_in++] = *audio++;
+            if (sdl_audio_queue_in == sdl_audio_queue_size)
+                sdl_audio_queue_in = 0;
+
+            assert(sdl_audio_queue_in != sdl_audio_queue_out);
+        } while (--count != 0);
+    }
+
+    SDL_UnlockAudio();
+
+    return samples;
 }
 
 unsigned int audio_queue_delay_samples(void) {
