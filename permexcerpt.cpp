@@ -155,6 +155,8 @@ SDL_Window*         mainWindow = NULL;
 SDL_Surface*        mainSurface = NULL;
 bool                quitting_app = false;
 
+bool                gui_redraw = true;
+
 void RedrawVideoFrame(void);
 
 void UpdateDisplayRect(void) {
@@ -177,10 +179,11 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
         mainSurface = SDL_GetWindowSurface(mainWindow);
         assert(mainSurface != NULL);
         UpdateDisplayRect();
-        RedrawVideoFrame();
+        gui_redraw = true;
     }
 }
 
+void DrawVideoFrame(void);
 bool is_playing(void);
 void do_play(void);
 void do_stop(void);
@@ -206,6 +209,17 @@ bool GUI_Idle(void) {
                     do_play();
             }
         }
+    }
+
+    if (gui_redraw) {
+        SDL_LockSurface(mainSurface);
+
+        memset(mainSurface->pixels, 0, static_cast<unsigned int>(mainSurface->pitch) * static_cast<unsigned int>(mainSurface->h));
+        DrawVideoFrame();
+
+        SDL_UnlockSurface(mainSurface);
+        SDL_UpdateWindowSurface(mainWindow);
+        gui_redraw = false;
     }
 
     return !(quitting_app);
@@ -1054,8 +1068,6 @@ void draw_video_frame(QueueEntry &frame) {
     }
 
     if (video_scaler != NULL) {
-        SDL_LockSurface(mainSurface);
-
         if (mainSurface->pixels != NULL) {
             uint8_t *dstptr[4] = {NULL,NULL,NULL,NULL};
             int dstlinesize[4] = {0,0,0,0};
@@ -1075,9 +1087,6 @@ void draw_video_frame(QueueEntry &frame) {
                 fprintf(stderr,"scaler error\n");
             }
         }
-
-        SDL_UnlockSurface(mainSurface);
-        SDL_UpdateWindowSurface(mainWindow);
     }
 }
 
@@ -1142,6 +1151,10 @@ double audio_queue_delay(void) {
     return double(audio_queue_delay_samples()) / audio_spec.freq;
 }
 
+void DrawVideoFrame(void) {
+    draw_video_frame(current_video_frame);
+}
+
 void Play_Idle(void) {
     unsigned int ft;
     AVFrame *fr = NULL;
@@ -1204,8 +1217,8 @@ void Play_Idle(void) {
     }
 
     if (current_video_frame.update && current_video_frame.frame != NULL) {
-        draw_video_frame(current_video_frame);
         current_video_frame.update = false;
+        gui_redraw = true;
     }
 
     if (current_audio_frame.update && current_audio_frame.frame != NULL) {
