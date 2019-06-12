@@ -195,7 +195,7 @@ bool GUI_Idle(void) {
         else if (event.type == SDL_WINDOWEVENT) {
             GUI_OnWindowEvent(event.window);
         }
-        else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+        else if (event.type == SDL_KEYDOWN) {
             if (event.key.keysym.sym == SDLK_ESCAPE) {
                 quitting_app = true;
             }
@@ -534,6 +534,7 @@ bool is_playing(void) {
 
 void do_play(void) {
     if (!playing) {
+        fprintf(stderr,"Playing\n");
         playing_base = monotonic_clock_us();
         play_in_base = play_in_time;
         playing = true;
@@ -542,6 +543,7 @@ void do_play(void) {
 
 void do_stop(void) {
     if (playing) {
+        fprintf(stderr,"Stopping\n");
         get_play_time_now();
         playing_base = monotonic_clock_us();
         play_in_base = play_in_time;
