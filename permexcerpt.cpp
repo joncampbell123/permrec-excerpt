@@ -741,6 +741,10 @@ void free_video_scaler(void) {
     video_scaler = NULL;
 }
 
+int sdl_audio_queue_write(const int16_t *audio,int samples) {
+    return samples;//TODO
+}
+
 void send_audio_frame(QueueEntry &frame) {
     if (frame.frame == NULL)
         return;
@@ -827,6 +831,9 @@ void send_audio_frame(QueueEntry &frame) {
             frame.frame->nb_samples);
 
         if (out_samp >= 0) {
+            assert(audio_resampler_frame->data[0] != NULL);
+            if (sdl_audio_queue_write(reinterpret_cast<int16_t*>(audio_resampler_frame->data[0]),out_samp) != out_samp)
+                fprintf(stderr,"Not all samples written\n");
         }
         else {
             fprintf(stderr,"Resampler failed\n");
