@@ -756,11 +756,11 @@ void send_audio_frame(QueueEntry &frame) {
             audio_resampler_trk.s.format != frame.frame->format ||
             audio_resampler_trk.s.channel_layout != frame.frame->channel_layout ||
             audio_resampler_trk.s.alloc_samples < frame.frame->nb_samples ||
-            audio_resampler_trk.d.rate != want_audio_rate ||
-            audio_resampler_trk.d.channels != want_audio_channels ||
+            audio_resampler_trk.d.rate != audio_spec.freq ||
+            audio_resampler_trk.d.channels != audio_spec.channels ||
             audio_resampler_trk.d.format != AV_SAMPLE_FMT_S16 ||
             audio_resampler_trk.d.channel_layout != 0 ||
-            audio_resampler_trk.d.alloc_samples < want_audio_rate) {
+            audio_resampler_trk.d.alloc_samples < audio_spec.freq) {
             fprintf(stderr,"Audio format changed, freeing resampler\n");
             free_audio_resampler();
         }
@@ -774,11 +774,11 @@ void send_audio_frame(QueueEntry &frame) {
         audio_resampler_trk.s.format = frame.frame->format;
         audio_resampler_trk.s.channel_layout = frame.frame->channel_layout;
         audio_resampler_trk.s.alloc_samples = frame.frame->nb_samples;
-        audio_resampler_trk.d.rate = want_audio_rate;
-        audio_resampler_trk.d.channels = want_audio_channels;
+        audio_resampler_trk.d.rate = audio_spec.freq;
+        audio_resampler_trk.d.channels = audio_spec.channels;
         audio_resampler_trk.d.format = AV_SAMPLE_FMT_S16;
         audio_resampler_trk.d.channel_layout = 0;
-        audio_resampler_trk.d.alloc_samples = want_audio_rate;
+        audio_resampler_trk.d.alloc_samples = audio_spec.freq;
 
         av_opt_set_int(audio_resampler,         "in_channel_count",     audio_resampler_trk.s.channels, 0); // FIXME: FFMPEG should document this!!
         av_opt_set_int(audio_resampler,         "out_channel_count",    audio_resampler_trk.d.channels, 0); // FIXME: FFMPEG should document this!!
