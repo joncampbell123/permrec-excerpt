@@ -533,10 +533,17 @@ public:
         if (avfmt != NULL && !eof) {
             avpkt_reset();
             if (av_read_frame(avfmt,&avpkt) >= 0) {
-                if (size_t(avpkt.stream_index) < size_t(avfmt->nb_streams))
+                if (size_t(avpkt.stream_index) < size_t(avfmt->nb_streams)) {
+                    Stream &s = stream(size_t(avpkt.stream_index));
+                    if (avpkt.pts != AV_NOPTS_VALUE)
+                        avpkt.pts += s.ts_adj;
+                    if (avpkt.dts != AV_NOPTS_VALUE)
+                        avpkt.dts += s.ts_adj;
                     return &avpkt;
-                else
+                }
+                else {
                     return NULL;
+                }
             }
 
             eof = true;
