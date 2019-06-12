@@ -570,6 +570,8 @@ bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 
         if (!schedule_video_frame(pt,fr))
             return false;
+
+        return true;
     }
 
     return false;
@@ -594,6 +596,8 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 
         if (!schedule_audio_frame(pt,fr))
             return false;
+
+        return true;
     }
 
     return false;
