@@ -611,6 +611,18 @@ struct ScalerTrack {
     }
 };
 
+struct ResamplerTrack {
+    int             rate = -1,channels = -1;
+    uint64_t        channel_count = 0;
+
+    void clear(void) {
+        rate = -1,channels = -1;
+        channel_count = 0;
+    }
+};
+
+ResamplerTrack                  audio_resampler_trk;
+SwrContext*                     audio_resampler = NULL;
 ScalerTrack                     video_scaler_trk;
 SwsContext*                     video_scaler = NULL;
 QueueEntry                      current_video_frame;
@@ -704,6 +716,18 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
     return false;
 }
 
+void free_audio_resampler(void) {
+    audio_resampler_trk.clear();
+    swr_free(&audio_resampler);
+    audio_resampler = NULL;
+}
+
+void free_video_scaler(void) {
+    video_scaler_trk.clear();
+    sws_freeContext(video_scaler);
+    video_scaler = NULL;
+}
+
 void draw_video_frame(QueueEntry &frame) {
     if (frame.frame == NULL)
         return;
@@ -756,9 +780,7 @@ void draw_video_frame(QueueEntry &frame) {
             video_scaler_trk.dh != video_region.h ||
             video_scaler_trk.df != AVPixelFormat(AV_PIX_FMT_BGRA)) {
             fprintf(stderr,"Scaler change\n");
-            video_scaler_trk.clear();
-            sws_freeContext(video_scaler);
-            video_scaler = NULL;
+            free_video_scaler();
         }
     }
 
@@ -979,6 +1001,8 @@ int main(int argc,char **argv) {
     }
     do_stop();
     flush_queue();
+    free_audio_resampler();
+    free_video_scaler();
 
     SDL_DestroyWindow(mainWindow);
     SDL_CloseAudio();
