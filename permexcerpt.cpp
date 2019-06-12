@@ -674,8 +674,8 @@ void Play_Idle(void) {
                 }
             }
             else if (in_file.is_eof()) {
-                // TODO if all frames played
-                do_stop();
+                if (video_queue.empty() && audio_queue.empty())
+                    do_stop();
             }
         }
         else {
