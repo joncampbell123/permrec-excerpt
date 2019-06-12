@@ -795,6 +795,24 @@ void send_audio_frame(QueueEntry &frame) {
             swr_get_delay(audio_resampler,frame.frame->sample_rate) + frame.frame->nb_samples,
             audio_spec.freq, frame.frame->sample_rate, AV_ROUND_UP));
 
+        assert(audio_resampler_frame == NULL);
+        audio_resampler_frame = av_frame_alloc();
+        if (audio_resampler_frame == NULL) {
+            fprintf(stderr,"Unable to alloc audio resampler frame\n");
+            free_audio_resampler();
+            return;
+        }
+        audio_resampler_frame->nb_samples = audio_resampler_trk.d.alloc_samples;
+        audio_resampler_frame->channels = audio_resampler_trk.d.channels;
+        audio_resampler_frame->sample_rate = audio_resampler_trk.d.rate;
+        audio_resampler_frame->format = audio_resampler_trk.d.format;
+        audio_resampler_frame->channel_layout = audio_resampler_trk.d.channel_layout;
+        if (av_frame_get_buffer(audio_resampler_frame,64) < 0) {
+            fprintf(stderr,"Unable to alloc buffer for audio resampler frame\n");
+            free_audio_resampler();
+            return;
+        }
+
         fprintf(stderr,"Audio resampler init out samples %d\n",audio_resampler_trk.d.alloc_samples);
     }
 }
