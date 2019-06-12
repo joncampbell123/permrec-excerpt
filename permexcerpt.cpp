@@ -579,6 +579,22 @@ struct QueueEntry {
     AVRational              container_ar = {0,0};
 };
 
+struct ScalerTrack {
+    int             sw = -1,sh = -1;
+    int             dw = -1,dh = -1;
+    AVPixelFormat   sf = AV_PIX_FMT_NONE;
+    AVPixelFormat   df = AV_PIX_FMT_NONE;
+
+    void clear(void) {
+        sw = -1,sh = -1;
+        dw = -1,dh = -1;
+        sf = AV_PIX_FMT_NONE;
+        df = AV_PIX_FMT_NONE;
+    }
+};
+
+ScalerTrack                     video_scaler_trk;
+SwsContext*                     video_scaler = NULL;
 QueueEntry                      current_video_frame;
 std::queue<QueueEntry>          video_queue;
 QueueEntry                      current_audio_frame;
@@ -711,6 +727,30 @@ void draw_video_frame(QueueEntry &frame) {
     assert(video_region.y >= 0);
     assert((video_region.x+video_region.w) <= display_region.w);
     assert((video_region.y+video_region.h) <= display_region.h);
+
+    if (video_scaler == NULL) {
+        video_scaler = sws_getContext(
+            // source
+            frame.frame->width,
+            frame.frame->height,
+            AVPixelFormat(frame.frame->format),
+            // dest
+            video_region.w,
+            video_region.h,
+            AVPixelFormat(AV_PIX_FMT_BGRA),
+            // opt
+            SWS_BILINEAR, NULL, NULL, NULL);
+        if (video_scaler == NULL) {
+            fprintf(stderr,"Failed to create scaler\n");
+            return;
+        }
+        video_scaler_trk.sw = frame.frame->width;
+        video_scaler_trk.sh = frame.frame->height;
+        video_scaler_trk.sf = AVPixelFormat(frame.frame->format);
+        video_scaler_trk.dw = video_region.w;
+        video_scaler_trk.dh = video_region.h;
+        video_scaler_trk.df = AVPixelFormat(AV_PIX_FMT_BGRA);
+    }
 }
 
 void Play_Idle(void) {
