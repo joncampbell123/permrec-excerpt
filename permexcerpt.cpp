@@ -224,9 +224,19 @@ public:
             close();
         }
         void close(void) {
+            av_frame_free(&frame);
+        }
+        bool open(void) {
+            if (frame == NULL) {
+                frame = av_frame_alloc();
+                if (frame == NULL) return false;
+            }
+
+            return true;
         }
     public:
         bool            codec_open = false;
+        AVFrame*        frame = NULL;
     };
 public:
     InputFile() {
@@ -447,27 +457,29 @@ public:
             return NULL;
 
         if (avc->codec_type == AVMEDIA_TYPE_VIDEO) {
-            AVFrame *fr = av_frame_alloc();
-            if (fr == NULL) return NULL;
+            if (!strm.open()) return NULL;
 
-            rd = avcodec_decode_video2(avc,fr,&got_frame,pkt);
-            if (rd < 0 || !got_frame || fr->width == 0 || fr->height == 0) {
-                av_frame_free(&fr);
+            rd = avcodec_decode_video2(avc,strm.frame,&got_frame,pkt);
+            if (rd < 0 || !got_frame || strm.frame->width == 0 || strm.frame->height == 0)
                 return NULL;
-            }
+
+            AVFrame *fr = av_frame_clone(strm.frame);
+            if (fr == NULL)
+                return NULL;
 
             ft = static_cast<unsigned int>(avc->codec_type);
             return fr;
         }
         else if (avc->codec_type == AVMEDIA_TYPE_AUDIO) {
-            AVFrame *fr = av_frame_alloc();
-            if (fr == NULL) return NULL;
+            if (!strm.open()) return NULL;
 
-            rd = avcodec_decode_audio4(avc,fr,&got_frame,pkt);
-            if (rd < 0 || !got_frame || fr->nb_samples == 0) {
-                av_frame_free(&fr);
+            rd = avcodec_decode_audio4(avc,strm.frame,&got_frame,pkt);
+            if (rd < 0 || !got_frame || strm.frame->nb_samples == 0)
                 return NULL;
-            }
+
+            AVFrame *fr = av_frame_clone(strm.frame);
+            if (fr == NULL)
+                return NULL;
 
             ft = static_cast<unsigned int>(avc->codec_type);
             return fr;
