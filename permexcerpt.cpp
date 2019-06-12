@@ -552,6 +552,11 @@ struct QueueEntry {
         frame = ent.frame; ent.frame = NULL;
         pt = ent.pt; ent.pt = 0;
     }
+    QueueEntry& operator=(QueueEntry &ent) = delete;
+    QueueEntry& operator=(QueueEntry &&ent) {
+        frame = ent.frame; ent.frame = NULL;
+        pt = ent.pt; ent.pt = 0;
+    }
     ~QueueEntry() {
         free();
     }
@@ -561,11 +566,14 @@ struct QueueEntry {
     void free_frame(void) {
         av_frame_free(&frame);
     }
+    bool                    done = false;
     AVFrame*                frame = NULL;
     double                  pt = 0;
 };
 
+QueueEntry                      current_video_frame;
 std::queue<QueueEntry>          video_queue;
+QueueEntry                      current_audio_frame;
 std::queue<QueueEntry>          audio_queue;
 
 void flush_queue(queue<QueueEntry> &m) {
@@ -657,33 +665,52 @@ void Play_Idle(void) {
         if (video_queue.size() >= 64 || audio_queue.size() >= 256)
             notfull = false;
 
-        if (fp.is_open() && notfull) {
-            AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
-            if (pkt != NULL) {
-                if (pkt->stream_index == in_file_video_stream) {
-                    fr = in_file.decode_frame(pkt,/*&*/ft);
-                    if (fr != NULL) {
-                        if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                            av_frame_free(&fr);
+        if (fp.is_open()) {
+            if (notfull) {
+                AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
+                if (pkt != NULL) {
+                    if (pkt->stream_index == in_file_video_stream) {
+                        fr = in_file.decode_frame(pkt,/*&*/ft);
+                        if (fr != NULL) {
+                            if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                                av_frame_free(&fr);
+                            }
+                        }
+                    }
+                    else if (pkt->stream_index == in_file_audio_stream) {
+                        fr = in_file.decode_frame(pkt,/*&*/ft);
+                        if (fr != NULL) {
+                            if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                                av_frame_free(&fr);
+                            }
                         }
                     }
                 }
-                else if (pkt->stream_index == in_file_audio_stream) {
-                    fr = in_file.decode_frame(pkt,/*&*/ft);
-                    if (fr != NULL) {
-                        if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                            av_frame_free(&fr);
-                        }
-                    }
+                else if (in_file.is_eof()) {
+                    if (video_queue.empty() && audio_queue.empty())
+                        do_stop();
                 }
-            }
-            else if (in_file.is_eof()) {
-                if (video_queue.empty() && audio_queue.empty())
-                    do_stop();
             }
         }
         else {
             do_stop();
+        }
+
+        get_play_time_now();
+        if (!video_queue.empty()) {
+            auto &ent = video_queue.front();
+            if (play_in_time >= ent.pt) {
+                current_video_frame = std::move(ent);
+                video_queue.pop();
+            }
+        }
+
+        if (!audio_queue.empty()) {
+            auto &ent = audio_queue.front();
+            if (play_in_time >= ent.pt) {
+                current_audio_frame = std::move(ent);
+                audio_queue.pop();
+            }
         }
     }
 }
