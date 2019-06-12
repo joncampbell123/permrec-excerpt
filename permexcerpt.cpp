@@ -650,10 +650,14 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 void Play_Idle(void) {
     unsigned int ft;
     AVFrame *fr = NULL;
+    bool notfull = true;
     auto &fp = current_file();
 
     if (is_playing()) {
-        if (fp.is_open()) {
+        if (video_queue.size() >= 64 || audio_queue.size() >= 256)
+            notfull = false;
+
+        if (fp.is_open() && notfull) {
             AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
             if (pkt != NULL) {
                 if (pkt->stream_index == in_file_video_stream) {
