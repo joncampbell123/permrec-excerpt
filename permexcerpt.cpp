@@ -1256,12 +1256,14 @@ void next_video_stream(void) {
     next_stream_of_type(AVMEDIA_TYPE_VIDEO,/*&*/in_file_video_stream);
     recompute_start_adj();
     sdl_audio_queue_flush();
+    flush_queue(video_queue);
 }
 
 void next_audio_stream(void) {
     next_stream_of_type(AVMEDIA_TYPE_AUDIO,/*&*/in_file_audio_stream);
     recompute_start_adj();
     sdl_audio_queue_flush();
+    flush_queue(audio_queue);
 }
 
 void Play_Idle(void) {
