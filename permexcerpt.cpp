@@ -639,6 +639,21 @@ public:
 
         return NULL;
     }
+    void reset_codec(const size_t i) {
+        AVStream *avs = avfmt_stream(i);
+        if (avs == NULL)
+            return;
+
+        Stream &strm = stream(i);
+        if (!strm.codec_open)
+            return;
+
+        AVCodecContext *avc = avs->codec;
+        if (avc == NULL)
+            return;
+
+        avcodec_flush_buffers(avc);
+    }
     int find_default_stream(int type) {
         if (avfmt != NULL) {
             for (size_t i=0;i < avfmt_stream_count();i++) {
