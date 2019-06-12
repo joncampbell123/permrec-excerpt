@@ -345,6 +345,18 @@ public:
         close();
     }
 public:
+    double get_duration(void) {
+        double d = 0;
+
+        if (!is_open())
+            return 0;
+
+        if (avfmt != NULL) {
+            d = double(avfmt->duration) / AV_TIME_BASE;
+        }
+
+        return d;
+    }
     bool open(const std::string &path) {
         if (is_open())
             close();
@@ -665,6 +677,7 @@ InputFile &current_file(void) {
 }
 
 us_time_t playing_base = 0;
+double play_duration = 0;
 double play_in_base = 0;
 double play_in_time = 0;
 bool playing = false;
@@ -1266,8 +1279,10 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    play_duration = in_file.get_duration();
     in_file_audio_stream = in_file.find_default_stream_audio();
     in_file_video_stream = in_file.find_default_stream_video();
+    fprintf(stderr,"Duration: %.3f\n",play_duration);
     fprintf(stderr,"Chose audio stream %d, video stream %d\n",in_file_audio_stream,in_file_video_stream);
 
     if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS|SDL_INIT_AUDIO) != 0) {
