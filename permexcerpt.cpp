@@ -799,11 +799,13 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 
     {
         double pt;
-        int64_t pts = audio_last_next_pts;
-        if (fr->pts != AV_NOPTS_VALUE)
+        int64_t pts = AV_NOPTS_VALUE;
+        if (pts == AV_NOPTS_VALUE && fr->pts != AV_NOPTS_VALUE)
             pts = fr->pts;
         if (pts == AV_NOPTS_VALUE && fr->pkt_dts != AV_NOPTS_VALUE)
             pts = fr->pkt_dts;
+        if (pts == AV_NOPTS_VALUE)
+            pts = audio_last_next_pts;
 
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;
