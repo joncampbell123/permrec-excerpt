@@ -409,6 +409,7 @@ us_time_t monotonic_clock_us(void) {
 int                 want_audio_rate = -1;
 int                 want_audio_channels = -1;
 
+SDL_Rect            playpos_region = {0,0,0,0};
 SDL_Rect            display_region = {0,0,0,0};
 SDL_Rect            video_region = {0,0,0,0};
 
@@ -424,11 +425,21 @@ bool                gui_redraw = true;
 void RedrawVideoFrame(void);
 
 void UpdateDisplayRect(void) {
+    playpos_region = {0,0,0,0};
+
     if (mainSurface) {
         display_region.x = 0;
         display_region.y = 0;
         display_region.w = mainSurface->w;
         display_region.h = mainSurface->h;
+
+        if (display_region.h >= 60 && display_region.w >= 120) {
+            display_region.h -= 20;
+            playpos_region.x = 0;
+            playpos_region.w = display_region.w;
+            playpos_region.y = display_region.h;
+            playpos_region.h = 20;
+        }
     }
     else {
         display_region.x = 0;
@@ -450,6 +461,7 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
 void next_video_stream(void);
 void next_audio_stream(void);
 void DrawVideoFrame(void);
+void DrawPlayPos(void);
 bool is_playing(void);
 void do_play(void);
 void do_stop(void);
@@ -488,6 +500,7 @@ bool GUI_Idle(void) {
 
         memset(mainSurface->pixels, 0, static_cast<unsigned int>(mainSurface->pitch) * static_cast<unsigned int>(mainSurface->h));
         DrawVideoFrame();
+        DrawPlayPos();
 
         SDL_UnlockSurface(mainSurface);
         SDL_UpdateWindowSurface(mainWindow);
@@ -1456,6 +1469,15 @@ double audio_queue_delay(void) {
 
 void DrawVideoFrame(void) {
     draw_video_frame(current_video_frame);
+}
+
+void DrawPlayPos(void) {
+    if (playpos_region.w == 0 || playpos_region.h == 0)
+        return;
+    if (mainSurface->pixels == NULL)
+        return;
+
+    SDL_FillRect(mainSurface, &playpos_region, SDL_MapRGB(mainSurface->format,31,31,31));
 }
 
 void next_stream_of_type(const int type,int &in_file_stream) {
