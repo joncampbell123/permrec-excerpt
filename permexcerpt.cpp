@@ -601,7 +601,7 @@ QueueEntry                      current_audio_frame;
 std::queue<QueueEntry>          audio_queue;
 
 void RedrawVideoFrame(void) {
-    current_video_frame.update = false;
+    current_video_frame.update = true;
 }
 
 void flush_queue(queue<QueueEntry> &m) {
@@ -765,6 +765,33 @@ void draw_video_frame(QueueEntry &frame) {
         video_scaler_trk.dh = video_region.h;
         video_scaler_trk.df = AVPixelFormat(AV_PIX_FMT_BGRA);
         fprintf(stderr,"Scaler init\n");
+    }
+
+    if (video_scaler != NULL) {
+        SDL_LockSurface(mainSurface);
+
+        if (mainSurface->pixels != NULL) {
+            uint8_t *dstptr[4] = {NULL,NULL,NULL,NULL};
+            int dstlinesize[4] = {0,0,0,0};
+
+            dstlinesize[0] = mainSurface->pitch;
+            dstptr[0] = reinterpret_cast<uint8_t*>(mainSurface->pixels) + (4 * video_region.x) + (mainSurface->pitch * video_region.y);
+
+            if (sws_scale(video_scaler,
+                        // source
+                        frame.frame->data,
+                        frame.frame->linesize,
+                        0,
+                        frame.frame->height,
+                        // dest
+                        dstptr,
+                        dstlinesize) <= 0) {
+                fprintf(stderr,"scaler error\n");
+            }
+        }
+
+        SDL_UnlockSurface(mainSurface);
+        SDL_UpdateWindowSurface(mainWindow);
     }
 }
 
