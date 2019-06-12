@@ -212,6 +212,14 @@ bool GUI_Idle(void) {
 }
 
 void audio_callback(void *userdata,Uint8* stream,int len) {
+    if (len < 0 || stream == NULL)
+        return;
+
+    int16_t *dst = reinterpret_cast<int16_t*>stream;
+    unsigned int samples = static_cast<unsigned int>(len / (2 * audio_spec.channels));
+
+    if (playing) {
+    }
 }
 
 class InputFile {
