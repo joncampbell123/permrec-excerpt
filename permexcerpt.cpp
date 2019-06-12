@@ -543,6 +543,14 @@ void do_stop(void) {
     }
 }
 
+bool schedule_video_frame(double pt,AVFrame *fr) {
+    return false;
+}
+
+bool schedule_audio_frame(double pt,AVFrame *fr) {
+    return false;
+}
+
 int64_t video_last_next_pts = AV_NOPTS_VALUE;
 bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
     {
@@ -559,6 +567,9 @@ bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
             return false;
 
         video_last_next_pts = pts + fr->pkt_duration;
+
+        if (!schedule_video_frame(pt,fr))
+            return false;
     }
 
     return false;
@@ -580,6 +591,9 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
             return false;
 
         audio_last_next_pts = pts + fr->pkt_duration;
+
+        if (!schedule_audio_frame(pt,fr))
+            return false;
     }
 
     return false;
