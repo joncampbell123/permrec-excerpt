@@ -155,6 +155,8 @@ SDL_Window*         mainWindow = NULL;
 SDL_Surface*        mainSurface = NULL;
 bool                quitting_app = false;
 
+void RedrawVideoFrame(void);
+
 void UpdateDisplayRect(void) {
     if (mainSurface) {
         display_region.x = 0;
@@ -175,6 +177,7 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
         mainSurface = SDL_GetWindowSurface(mainWindow);
         assert(mainSurface != NULL);
         UpdateDisplayRect();
+        RedrawVideoFrame();
     }
 }
 
@@ -569,6 +572,7 @@ struct QueueEntry {
     void free_frame(void) {
         av_frame_free(&frame);
     }
+    bool                    update = false;
     bool                    done = false;
     AVFrame*                frame = NULL;
     double                  pt = 0;
@@ -579,6 +583,10 @@ QueueEntry                      current_video_frame;
 std::queue<QueueEntry>          video_queue;
 QueueEntry                      current_audio_frame;
 std::queue<QueueEntry>          audio_queue;
+
+void RedrawVideoFrame(void) {
+    current_video_frame.update = false;
+}
 
 void flush_queue(queue<QueueEntry> &m) {
     while (!m.empty()) m.pop();
@@ -752,7 +760,7 @@ void Play_Idle(void) {
             if (play_in_time >= ent.pt) {
                 current_video_frame = std::move(ent);
                 video_queue.pop();
-                draw_video_frame(current_video_frame);
+                current_video_frame.update = true;
             }
         }
 
@@ -761,8 +769,14 @@ void Play_Idle(void) {
             if (play_in_time >= ent.pt) {
                 current_audio_frame = std::move(ent);
                 audio_queue.pop();
+                current_audio_frame.update = true;
             }
         }
+    }
+
+    if (current_video_frame.update && current_video_frame.frame != NULL) {
+        draw_video_frame(current_video_frame);
+        current_video_frame.update = false;
     }
 }
 
