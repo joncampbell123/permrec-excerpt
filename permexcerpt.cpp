@@ -556,10 +556,9 @@ bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
         else
-            pt = get_play_time_now();
+            return false;
 
-        if (pts != AV_NOPTS_VALUE)
-            video_last_next_pts = pts + fr->pkt_duration;
+        video_last_next_pts = pts + fr->pkt_duration;
     }
 
     return false;
@@ -578,10 +577,9 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;
         else
-            pt = get_play_time_now();
+            return false;
 
-        if (pts != AV_NOPTS_VALUE)
-            audio_last_next_pts = pts + fr->pkt_duration;
+        audio_last_next_pts = pts + fr->pkt_duration;
     }
 
     return false;
