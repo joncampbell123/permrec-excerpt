@@ -145,7 +145,8 @@ us_time_t monotonic_clock_us(void) {
 int                 want_audio_rate = -1;
 int                 want_audio_channels = -1;
 
-SDL_Rect            display_region;
+SDL_Rect            display_region = {0,0,0,0};
+SDL_Rect            video_region = {0,0,0,0};
 
 SDL_AudioSpec       audio_spec;
 bool                audio_open = false;
@@ -556,6 +557,7 @@ struct QueueEntry {
     QueueEntry& operator=(QueueEntry &&ent) {
         frame = ent.frame; ent.frame = NULL;
         pt = ent.pt; ent.pt = 0;
+        return *this;
     }
     ~QueueEntry() {
         free();
@@ -655,6 +657,27 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
     return false;
 }
 
+void draw_video_frame(QueueEntry &frame) {
+    if (frame.frame == NULL)
+        return;
+    if (frame.frame->width <= 0 || frame.frame->height <= 0)
+        return;
+    if (display_region.w <= 0 || display_region.h <= 0)
+        return;
+
+    /* fit the frame */
+    double sw = frame.frame->width;
+    double sh = frame.frame->height;
+
+    // todo: AVStream
+    if (frame.frame->sample_aspect_ratio.num > 0 && frame.frame->sample_aspect_ratio.den > 0) {
+        double ar = double(frame.frame->sample_aspect_ratio.num) / frame.frame->sample_aspect_ratio.den;
+        sw *= ar;
+    }
+
+    fprintf(stderr,"%.3f x %.3f\n",sw,sh);
+}
+
 void Play_Idle(void) {
     unsigned int ft;
     AVFrame *fr = NULL;
@@ -702,6 +725,7 @@ void Play_Idle(void) {
             if (play_in_time >= ent.pt) {
                 current_video_frame = std::move(ent);
                 video_queue.pop();
+                draw_video_frame(current_video_frame);
             }
         }
 
