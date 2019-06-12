@@ -769,13 +769,13 @@ bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
 
     {
         double pt;
-        int64_t pts = video_last_next_pts;
-        if (fr->pts != AV_NOPTS_VALUE)
+        int64_t pts = AV_NOPTS_VALUE;
+        if (pts == AV_NOPTS_VALUE && fr->pts != AV_NOPTS_VALUE)
             pts = fr->pts;
-        if (pts == AV_NOPTS_VALUE && fr->pkt_pts != AV_NOPTS_VALUE)
-            pts = fr->pkt_pts;
         if (pts == AV_NOPTS_VALUE && fr->pkt_dts != AV_NOPTS_VALUE)
             pts = fr->pkt_dts;
+        if (pts == AV_NOPTS_VALUE)
+            pts = video_last_next_pts;
 
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
