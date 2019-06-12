@@ -474,8 +474,8 @@ void UpdateDisplayRect(void) {
             playpos_region.y = display_region.h;
             playpos_region.h = 20;
 
-            int begin_x = (1+1+1+2+1+2+1+2)*8;      //  H:MM:SS.CC
-                                                    // 1112-12-12-
+            int begin_x = (1+1+1+2+1+2+1+2+1)*8;    //  H:MM:SS.CC
+                                                    // 1112-12-12-1
             int end_x = playpos_region.w - 8;
 
             assert((begin_x + 8) < end_x);
