@@ -612,14 +612,24 @@ struct ScalerTrack {
 };
 
 struct ResamplerTrack {
-    int             rate = -1,channels = -1;
-    uint64_t        channel_count = 0;
-    int             alloc_samples = 0;
+    struct group {
+        int             rate = -1,channels = -1,format = -1;
+        uint64_t        channel_layout = 0;
+        int             alloc_samples = 0;
+
+        void clear(void) {
+            alloc_samples = 0;
+            rate = -1,channels = -1;
+            channel_layout = 0;
+            format = -1;
+        }
+    };
+
+    group       s,d;
 
     void clear(void) {
-        alloc_samples = 0;
-        rate = -1,channels = -1;
-        channel_count = 0;
+        s.clear();
+        d.clear();
     }
 };
 
@@ -732,6 +742,62 @@ void free_video_scaler(void) {
     video_scaler = NULL;
 }
 
+void send_audio_frame(QueueEntry &frame) {
+    if (frame.frame == NULL)
+        return;
+    if (frame.frame->sample_rate == 0 || frame.frame->channels == 0 || frame.frame->format < 0)
+        return;
+    if (frame.frame->nb_samples == 0)
+        return;
+
+    if (audio_resampler != NULL) {
+        if (audio_resampler_trk.s.rate != frame.frame->sample_rate ||
+            audio_resampler_trk.s.channels != frame.frame->channels ||
+            audio_resampler_trk.s.format != frame.frame->format ||
+            audio_resampler_trk.s.channel_layout != frame.frame->channel_layout ||
+            audio_resampler_trk.s.alloc_samples < frame.frame->nb_samples ||
+            audio_resampler_trk.d.rate != want_audio_rate ||
+            audio_resampler_trk.d.channels != want_audio_channels ||
+            audio_resampler_trk.d.format != AV_SAMPLE_FMT_S16 ||
+            audio_resampler_trk.d.channel_layout != 0 ||
+            audio_resampler_trk.d.alloc_samples < want_audio_rate) {
+            fprintf(stderr,"Audio format changed, freeing resampler\n");
+            free_audio_resampler();
+        }
+    }
+    if (audio_resampler == NULL) {
+        audio_resampler = swr_alloc();
+        if (audio_resampler == NULL) return;
+
+        audio_resampler_trk.s.rate = frame.frame->sample_rate;
+        audio_resampler_trk.s.channels = frame.frame->channels;
+        audio_resampler_trk.s.format = frame.frame->format;
+        audio_resampler_trk.s.channel_layout = frame.frame->channel_layout;
+        audio_resampler_trk.s.alloc_samples = frame.frame->nb_samples;
+        audio_resampler_trk.d.rate = want_audio_rate;
+        audio_resampler_trk.d.channels = want_audio_channels;
+        audio_resampler_trk.d.format = AV_SAMPLE_FMT_S16;
+        audio_resampler_trk.d.channel_layout = 0;
+        audio_resampler_trk.d.alloc_samples = want_audio_rate;
+
+        av_opt_set_int(audio_resampler,         "in_channel_count",     audio_resampler_trk.s.channels, 0); // FIXME: FFMPEG should document this!!
+        av_opt_set_int(audio_resampler,         "out_channel_count",    audio_resampler_trk.d.channels, 0); // FIXME: FFMPEG should document this!!
+        av_opt_set_int(audio_resampler,         "in_channel_layout",    int64_t(audio_resampler_trk.s.channel_layout), 0);
+        av_opt_set_int(audio_resampler,         "out_channel_layout",   int64_t(audio_resampler_trk.d.channel_layout), 0);
+        av_opt_set_int(audio_resampler,         "in_sample_rate",       audio_resampler_trk.s.rate, 0);
+        av_opt_set_int(audio_resampler,         "out_sample_rate",      audio_resampler_trk.d.rate, 0);
+        av_opt_set_sample_fmt(audio_resampler,  "in_sample_fmt",        AVSampleFormat(audio_resampler_trk.s.format), 0);
+        av_opt_set_sample_fmt(audio_resampler,  "out_sample_fmt",       AVSampleFormat(audio_resampler_trk.d.format), 0);
+
+        if (swr_init(audio_resampler) < 0) {
+            fprintf(stderr,"Unable to init audio resampler\n");
+            return;
+        }
+
+        fprintf(stderr,"Audio resampler init\n");
+    }
+}
+
 void draw_video_frame(QueueEntry &frame) {
     if (frame.frame == NULL)
         return;
@@ -841,6 +907,14 @@ void draw_video_frame(QueueEntry &frame) {
     }
 }
 
+unsigned int audio_queue_delay_samples(void) {
+    return 0;
+}
+
+double audio_queue_delay(void) {
+    return double(audio_queue_delay_samples()) / audio_spec.freq;
+}
+
 void Play_Idle(void) {
     unsigned int ft;
     AVFrame *fr = NULL;
@@ -894,7 +968,7 @@ void Play_Idle(void) {
 
         if (!audio_queue.empty()) {
             auto &ent = audio_queue.front();
-            if (play_in_time >= ent.pt) {
+            if (play_in_time >= (ent.pt - audio_queue_delay())) {
                 current_audio_frame = std::move(ent);
                 audio_queue.pop();
                 current_audio_frame.update = true;
@@ -905,6 +979,11 @@ void Play_Idle(void) {
     if (current_video_frame.update && current_video_frame.frame != NULL) {
         draw_video_frame(current_video_frame);
         current_video_frame.update = false;
+    }
+
+    if (current_audio_frame.update && current_audio_frame.frame != NULL) {
+        send_audio_frame(current_audio_frame);
+        current_audio_frame.update = false;
     }
 }
 
