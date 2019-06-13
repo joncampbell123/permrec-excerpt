@@ -1721,39 +1721,37 @@ void Play_Idle(void) {
     bool notfull = true;
     auto &fp = current_file();
 
-    if (is_playing()) {
+    if (is_playing() && !fp.is_open())
+        do_stop();
+
+    if (fp.is_open()) {
         if (video_queue.size() >= 64 || audio_queue.size() >= 256)
             notfull = false;
 
-        if (fp.is_open()) {
-            if (notfull) {
-                AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
-                if (pkt != NULL) {
-                    if (pkt->stream_index == in_file_video_stream) {
-                        fr = in_file.decode_frame(pkt,/*&*/ft);
-                        if (fr != NULL) {
-                            if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                                av_frame_free(&fr);
-                            }
-                        }
-                    }
-                    else if (pkt->stream_index == in_file_audio_stream) {
-                        fr = in_file.decode_frame(pkt,/*&*/ft);
-                        if (fr != NULL) {
-                            if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                                av_frame_free(&fr);
-                            }
+        if (notfull) {
+            AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
+            if (pkt != NULL) {
+                if (pkt->stream_index == in_file_video_stream) {
+                    fr = in_file.decode_frame(pkt,/*&*/ft);
+                    if (fr != NULL) {
+                        if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                            av_frame_free(&fr);
                         }
                     }
                 }
-                else if (in_file.is_eof()) {
-                    if (video_queue.empty() && audio_queue.empty())
-                        do_stop();
+                else if (pkt->stream_index == in_file_audio_stream) {
+                    fr = in_file.decode_frame(pkt,/*&*/ft);
+                    if (fr != NULL) {
+                        if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                            av_frame_free(&fr);
+                        }
+                    }
                 }
             }
-        }
-        else {
-            do_stop();
+            else if (in_file.is_eof()) {
+                if (video_queue.empty() && audio_queue.empty())
+                    do_stop();
+            }
         }
 
         get_play_time_now();
