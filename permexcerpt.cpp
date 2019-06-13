@@ -1759,12 +1759,16 @@ void Play_Idle(void) {
         }
 
         get_play_time_now();
-        if (!video_queue.empty()) {
+        while (!video_queue.empty()) {
             auto &ent = video_queue.front();
-            if (play_in_time >= ent.pt || paused_need_frame) {
+            if ((is_playing() && play_in_time >= ent.pt) || paused_need_frame) {
                 current_video_frame = std::move(ent);
                 video_queue.pop();
                 current_video_frame.update = true;
+                paused_need_frame = false;
+            }
+            else {
+                break;
             }
         }
 
