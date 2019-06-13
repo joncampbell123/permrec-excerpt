@@ -1256,7 +1256,26 @@ void do_stop(void) {
 }
 
 void do_export_ui(void) {
-    // TODO
+    auto &fp = current_file();
+    auto &name = fp.get_path();
+
+    if (in_point < 0 || out_point < 0)
+        return;
+    if (in_point >= out_point)
+        return;
+
+    if (name.empty()) return;
+
+    /* get file extension including dot */
+    std::string ext;
+    {
+        size_t i = name.find_last_of('.');
+        if (i == string::npos) return;
+        ext = name.substr(i);
+    }
+
+    fprintf(stderr,"from filename = '%s'\n",name.c_str());
+    fprintf(stderr,"ext = '%s'\n",ext.c_str());
 }
 
 struct QueueEntry {
