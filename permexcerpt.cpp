@@ -533,6 +533,18 @@ void gui_redraw_do_locked(void) {
     DrawPlayPos();
 }
 
+void do_gui_check_redraw(void) {
+    if (gui_redraw) {
+        SDL_LockSurface(mainSurface);
+        gui_redraw_do_locked();
+        SDL_UnlockSurface(mainSurface);
+        SDL_UpdateWindowSurface(mainWindow);
+        gui_redraw = false;
+
+        gui_redraw_at_play_time = play_in_time + 0.1;
+    }
+}
+
 void MouseDragThumb(int x,int y) {
     (void)y;
 
@@ -648,16 +660,7 @@ bool GUI_Idle(void) {
     if (is_playing() && gui_redraw_at_play_time >= 0.0 && play_in_time >= gui_redraw_at_play_time)
         gui_redraw = true;
 
-    if (gui_redraw) {
-        SDL_LockSurface(mainSurface);
-        gui_redraw_do_locked();
-        SDL_UnlockSurface(mainSurface);
-        SDL_UpdateWindowSurface(mainWindow);
-        gui_redraw = false;
-
-        gui_redraw_at_play_time = play_in_time + 0.1;
-    }
-
+    do_gui_check_redraw();
     SDL_Delay(is_playing() ? 1 : (1000/100));
 
     return !(quitting_app);
