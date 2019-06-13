@@ -1474,7 +1474,7 @@ void send_audio_frame(QueueEntry &frame) {
         audio_resampler_trk.s.channels = frame.frame->channels;
         audio_resampler_trk.s.format = frame.frame->format;
         audio_resampler_trk.s.channel_layout = frame.frame->channel_layout;
-        audio_resampler_trk.s.alloc_samples = frame.frame->nb_samples;
+        audio_resampler_trk.s.alloc_samples = frame.frame->nb_samples * 2;  // in case of ASF files
         audio_resampler_trk.d.rate = audio_spec.freq;
         audio_resampler_trk.d.channels = audio_spec.channels;
         audio_resampler_trk.d.format = AV_SAMPLE_FMT_S16;
@@ -1495,7 +1495,7 @@ void send_audio_frame(QueueEntry &frame) {
         }
 
         audio_resampler_trk.d.alloc_samples = static_cast<int>(av_rescale_rnd(
-            swr_get_delay(audio_resampler,frame.frame->sample_rate) + frame.frame->nb_samples,
+            swr_get_delay(audio_resampler,frame.frame->sample_rate) + audio_resampler_trk.s.alloc_samples,
             audio_spec.freq, frame.frame->sample_rate, AV_ROUND_UP));
 
         assert(audio_resampler_frame == NULL);
