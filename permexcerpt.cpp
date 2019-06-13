@@ -1980,7 +1980,7 @@ void Play_Idle(void) {
             }
         }
 
-        times = 32;
+        times = 4;
         while (times-- > 0) {
             if (!is_playing() && in_file_video_stream >= 0 && !video_queue.empty() && current_video_frame.frame == NULL)
                 paused_need_frame = true;
@@ -2009,7 +2009,7 @@ void Play_Idle(void) {
             }
         }
 
-        times = 128;
+        times = 16;
         while (times-- > 0) {
             if (audio_queue.size() < 256 && !audio_queue_pkt.empty()) {
                 QueueEntry ent = std::move(audio_queue_pkt.front());
