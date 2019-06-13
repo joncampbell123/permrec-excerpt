@@ -521,6 +521,8 @@ enum {
 };
 
 void MouseDragThumb(int x,int y) {
+    (void)y;
+
     if (playpos_thumb.w == 0)
         return;
     if (playpos_bar.w == 0)
@@ -571,9 +573,6 @@ bool GUI_Idle(void) {
         }
         else if (event.type == SDL_MOUSEBUTTONUP) {
             if (mouse_drag >= 0) {
-                if (mouse_drag == MOUSE_DRAG_THUMB)
-                    MouseDragThumb(event.button.x,event.button.y);
-
                 mouse_drag = -1;
                 gui_redraw = true;
             }
