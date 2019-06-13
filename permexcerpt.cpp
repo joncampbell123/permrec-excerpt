@@ -1255,6 +1255,11 @@ void do_stop(void) {
     }
 }
 
+bool do_prompt(std::string &str,const std::string &title) {
+    // TODO
+    return false;
+}
+
 void do_export_ui(void) {
     auto &fp = current_file();
     auto &name = fp.get_path();
@@ -1276,6 +1281,18 @@ void do_export_ui(void) {
 
     fprintf(stderr,"from filename = '%s'\n",name.c_str());
     fprintf(stderr,"ext = '%s'\n",ext.c_str());
+
+    /* prompt for file name */
+    std::string unamestr;
+    if (!do_prompt(/*&*/unamestr,"Clip name?")) {
+        fprintf(stderr,"User cancelled prompt\n");
+        return;
+    }
+    if (unamestr.empty()) {
+        fprintf(stderr,"User did not enter anything\n");
+        return;
+    }
+    fprintf(stderr,"User entered = '%s'\n",unamestr.c_str());
 }
 
 struct QueueEntry {
