@@ -1720,6 +1720,7 @@ void Play_Idle(void) {
     AVFrame *fr = NULL;
     bool notfull = true;
     auto &fp = current_file();
+    bool paused_need_frame = false;
 
     if (is_playing() && !fp.is_open())
         do_stop();
@@ -1727,6 +1728,9 @@ void Play_Idle(void) {
     if (fp.is_open()) {
         if (video_queue.size() >= 64 || audio_queue.size() >= 256)
             notfull = false;
+
+        if (!is_playing() && in_file_video_stream >= 0 && !video_queue.empty() && current_video_frame.frame == NULL)
+            paused_need_frame = true;
 
         if (notfull) {
             AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
@@ -1757,7 +1761,7 @@ void Play_Idle(void) {
         get_play_time_now();
         if (!video_queue.empty()) {
             auto &ent = video_queue.front();
-            if (play_in_time >= ent.pt) {
+            if (play_in_time >= ent.pt || paused_need_frame) {
                 current_video_frame = std::move(ent);
                 video_queue.pop();
                 current_video_frame.update = true;
