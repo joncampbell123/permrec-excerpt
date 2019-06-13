@@ -608,6 +608,14 @@ bool GUI_Idle(void) {
             else if (event.key.keysym.sym == SDLK_a) {
                 next_audio_stream();
             }
+            else if (event.key.keysym.sym == SDLK_LEFTBRACKET) {
+                if (in_point >= 0)
+                    do_seek_rel(in_point - play_in_time);
+            }
+            else if (event.key.keysym.sym == SDLK_RIGHTBRACKET) {
+                if (out_point >= 0)
+                    do_seek_rel(out_point - play_in_time);
+            }
             else if (event.key.keysym.sym == SDLK_LEFT) {
                 if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
                     do_seek_rel(-60);
