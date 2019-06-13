@@ -1772,24 +1772,21 @@ void Play_Idle(void) {
             }
         }
 
-        if (!audio_queue.empty()) {
+        while (!audio_queue.empty()) {
             auto &ent = audio_queue.front();
-            if (audio_queue_delay() < 0.2 && play_in_time >= (ent.pt - audio_queue_delay())) {
+            if (is_playing() && audio_queue_delay() < 0.2 && play_in_time >= (ent.pt - audio_queue_delay())) {
                 current_audio_frame = std::move(ent);
                 audio_queue.pop();
-                current_audio_frame.update = true;
+                send_audio_frame(current_audio_frame);
             }
+
+            break;
         }
     }
 
     if (current_video_frame.update && current_video_frame.frame != NULL) {
         current_video_frame.update = false;
         gui_redraw = true;
-    }
-
-    if (current_audio_frame.update && current_audio_frame.frame != NULL) {
-        send_audio_frame(current_audio_frame);
-        current_audio_frame.update = false;
     }
 }
 
