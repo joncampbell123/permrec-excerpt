@@ -527,6 +527,12 @@ enum {
     MOUSE_DRAG_THUMB=1
 };
 
+void gui_redraw_do_locked(void) {
+    memset(mainSurface->pixels, 0, static_cast<unsigned int>(mainSurface->pitch) * static_cast<unsigned int>(mainSurface->h));
+    DrawVideoFrame();
+    DrawPlayPos();
+}
+
 void MouseDragThumb(int x,int y) {
     (void)y;
 
@@ -644,11 +650,7 @@ bool GUI_Idle(void) {
 
     if (gui_redraw) {
         SDL_LockSurface(mainSurface);
-
-        memset(mainSurface->pixels, 0, static_cast<unsigned int>(mainSurface->pitch) * static_cast<unsigned int>(mainSurface->h));
-        DrawVideoFrame();
-        DrawPlayPos();
-
+        gui_redraw_do_locked();
         SDL_UnlockSurface(mainSurface);
         SDL_UpdateWindowSurface(mainWindow);
         gui_redraw = false;
