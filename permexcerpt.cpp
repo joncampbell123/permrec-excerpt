@@ -1077,6 +1077,7 @@ bool is_playing(void) {
 }
 
 void flush_queue(void);
+void clear_current_av(void);
 
 void do_seek_rel(double dt) {
     play_in_time += dt;
@@ -1089,6 +1090,7 @@ void do_seek_rel(double dt) {
     fp.reset_codec(size_t(in_file_video_stream));
     fp.seek_to(play_in_time);
     sdl_audio_queue_flush();
+    clear_current_av();
     flush_queue();
 
     gui_redraw = true;
@@ -1194,6 +1196,11 @@ QueueEntry                      current_video_frame;
 std::queue<QueueEntry>          video_queue;
 QueueEntry                      current_audio_frame;
 std::queue<QueueEntry>          audio_queue;
+
+void clear_current_av(void) {
+    current_video_frame.free();
+    current_audio_frame.free();
+}
 
 void RedrawVideoFrame(void) {
     current_video_frame.update = true;
