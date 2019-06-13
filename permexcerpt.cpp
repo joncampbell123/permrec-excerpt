@@ -1078,6 +1078,9 @@ public:
             if (rd < 0 || !got_frame || strm.frame->nb_samples == 0)
                 return NULL;
 
+            if (rd != pkt->size)
+                fprintf(stderr,"WARNING: Not all audio decoded\n");
+
             AVFrame *fr = av_frame_clone(strm.frame);
             if (fr == NULL)
                 fr = copy_the_audio_frame_because_ffmpeg_wont_do_it_for_some_stupid_reason(strm.frame);
