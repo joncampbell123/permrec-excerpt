@@ -572,6 +572,7 @@ bool GUI_Idle(void) {
                 p.x = event.button.x;
                 p.y = event.button.y;
                 if (SDL_PointInRect(&p,&tmp)) {
+                    SDL_CaptureMouse(SDL_TRUE);
                     mouse_drag = MOUSE_DRAG_THUMB;
                     gui_redraw = true;
                 }
@@ -582,6 +583,8 @@ bool GUI_Idle(void) {
                 mouse_drag = -1;
                 gui_redraw = true;
             }
+
+            SDL_CaptureMouse(SDL_FALSE);
         }
         else if (event.type == SDL_KEYDOWN) {
             if (event.key.keysym.sym == SDLK_ESCAPE) {
