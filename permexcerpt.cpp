@@ -1702,6 +1702,7 @@ void next_video_stream(void) {
     sdl_audio_queue_flush();
     flush_queue(video_queue);
     fp.reset_codec(size_t(in_file_video_stream));
+    do_seek_rel(0);
 }
 
 void next_audio_stream(void) {
@@ -1714,6 +1715,7 @@ void next_audio_stream(void) {
     sdl_audio_queue_flush();
     flush_queue(audio_queue);
     fp.reset_codec(size_t(in_file_audio_stream));
+    do_seek_rel(0);
 }
 
 void Play_Idle(void) {
