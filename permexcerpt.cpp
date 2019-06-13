@@ -574,6 +574,7 @@ bool GUI_Idle(void) {
                 if (SDL_PointInRect(&p,&tmp)) {
                     SDL_CaptureMouse(SDL_TRUE);
                     mouse_drag = MOUSE_DRAG_THUMB;
+                    MouseDragThumb(event.button.x,event.button.y);
                     gui_redraw = true;
                 }
             }
