@@ -909,6 +909,9 @@ public:
         eof = false;
         if (t < 0) t = 0;
         int64_t ts = int64_t(t * AV_TIME_BASE);
+        if (avfmt->start_time != AV_NOPTS_VALUE)
+            ts += avfmt->start_time;
+
         if (av_seek_frame(avfmt, -1, ts, AVSEEK_FLAG_BACKWARD) < 0) {
             fprintf(stderr,"avseek failed\n");
             return false;
