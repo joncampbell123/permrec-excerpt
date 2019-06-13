@@ -505,6 +505,7 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
     }
 }
 
+void do_seek_rel(double dt);
 void next_video_stream(void);
 void next_audio_stream(void);
 void DrawVideoFrame(void);
@@ -538,6 +539,12 @@ bool GUI_Idle(void) {
             }
             else if (event.key.keysym.sym == SDLK_a) {
                 next_audio_stream();
+            }
+            else if (event.key.keysym.sym == SDLK_LEFT) {
+                do_seek_rel(-5);
+            }
+            else if (event.key.keysym.sym == SDLK_RIGHT) {
+                do_seek_rel(5);
             }
         }
     }
@@ -895,6 +902,20 @@ public:
             avpkt_valid = false;
         }
     }
+    bool seek_to(double t) {
+        if (avfmt == NULL)
+            return false;
+
+        eof = false;
+        if (t < 0) t = 0;
+        int64_t ts = int64_t(t * AV_TIME_BASE);
+        if (av_seek_frame(avfmt, -1, ts, AVSEEK_FLAG_BACKWARD) < 0) {
+            fprintf(stderr,"avseek failed\n");
+            return false;
+        }
+
+        return true;
+    }
     AVPacket *read_packet(void) { // caller must not free it, because we will
         if (avfmt != NULL && !eof) {
             avpkt_reset();
@@ -1044,6 +1065,24 @@ double get_play_time_now(void) {
 
 bool is_playing(void) {
     return playing;
+}
+
+void flush_queue(void);
+
+void do_seek_rel(double dt) {
+    play_in_time += dt;
+    if (play_in_time < 0) play_in_time = 0;
+    play_in_base = play_in_time;
+    playing_base = monotonic_clock_us();
+
+    auto &fp = current_file();
+    fp.reset_codec(size_t(in_file_audio_stream));
+    fp.reset_codec(size_t(in_file_video_stream));
+    fp.seek_to(play_in_time);
+    sdl_audio_queue_flush();
+    flush_queue();
+
+    gui_redraw = true;
 }
 
 void do_play(void) {
