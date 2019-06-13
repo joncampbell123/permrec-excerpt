@@ -1940,7 +1940,7 @@ void process_audio_queue(void) {
 
             /* I'm not gonna take you back to the past,
              * to play stale old audio fragments that have passed. */
-            if (current_audio_frame.pt >= (play_in_time-0.005-current_audio_frame.duration()))
+            if (current_audio_frame.pt >= (play_in_time-0.005-current_audio_frame.duration()-audio_queue_delay()))
                 send_audio_frame(current_audio_frame);
         }
 
