@@ -399,6 +399,9 @@ double play_in_base = 0;
 double play_in_time = 0;
 bool playing = false;
 
+double                      in_point = -1;
+double                      out_point = -1;
+
 ns_time_t monotonic_clock_ns(void) {
 	struct timespec tv;
 
@@ -505,6 +508,9 @@ void GUI_OnWindowEvent(SDL_WindowEvent &wevent) {
     }
 }
 
+void mark_in(void);
+void mark_out(void);
+void clear_cut_points(void);
 void do_seek_rel(double dt);
 void next_video_stream(void);
 void next_audio_stream(void);
@@ -586,6 +592,15 @@ bool GUI_Idle(void) {
                     do_stop();
                 else
                     do_play();
+            }
+            else if (event.key.keysym.sym == SDLK_i) {
+                mark_in();
+            }
+            else if (event.key.keysym.sym == SDLK_o) {
+                mark_out();
+            }
+            else if (event.key.keysym.sym == SDLK_c) {
+                clear_cut_points();
             }
             else if (event.key.keysym.sym == SDLK_v) {
                 next_video_stream();
@@ -1109,6 +1124,35 @@ protected:
 InputFile                   in_file;
 int                         in_file_video_stream = -1;
 int                         in_file_audio_stream = -1;
+
+void mark_in(void) {
+    in_point = play_in_time;
+    fprintf(stderr,"Mark in: %.3f\n",in_point);
+    gui_redraw = true;
+}
+
+void mark_out(void) {
+    out_point = play_in_time;
+    fprintf(stderr,"Mark out: %.3f\n",out_point);
+    gui_redraw = true;
+}
+
+void clear_cut_points(void) {
+    fprintf(stderr,"Clearing cut points\n");
+    in_point = -1;
+    out_point = -1;
+    gui_redraw = true;
+}
+
+void clear_in_point(void) {
+    in_point = -1;
+    gui_redraw = true;
+}
+
+void clear_out_point(void) {
+    out_point = -1;
+    gui_redraw = true;
+}
 
 InputFile &current_file(void) {
     return in_file;
@@ -1673,6 +1717,40 @@ void DrawPlayPos(void) {
 
     SDL_FillRect(mainSurface, &playpos_region, SDL_MapRGB(mainSurface->format,31,31,31));
     SDL_FillRect(mainSurface, &playpos_bar,    SDL_MapRGB(mainSurface->format,63,63,63));
+
+    if (in_point >= 0 || out_point >= 0) {
+        SDL_Rect rct;
+        int p1,p2;
+        double t;
+
+        t = std::min(in_point,play_duration) / play_duration;
+        p1 = playpos_bar.x + static_cast<int>(t * double(playpos_bar.w));
+
+        t = std::min(out_point,play_duration) / play_duration;
+        p2 = playpos_bar.x + static_cast<int>(t * double(playpos_bar.w));
+
+        if (in_point >= 0 && out_point >= 0 && in_point < out_point && (p1+1) < (p2-1)) {
+            rct = playpos_bar;
+            rct.x = p1 + 1;
+            rct.w = (p2 - 1) - (p1 + 1);
+            SDL_FillRect(mainSurface, &rct, SDL_MapRGB(mainSurface->format,144,191,144));
+        }
+
+        if (in_point >= 0) {
+            rct = playpos_bar;
+            rct.x = p1;
+            rct.w = 1;
+            SDL_FillRect(mainSurface, &rct, SDL_MapRGB(mainSurface->format,144,191,191));
+        }
+
+        if (out_point >= 0 && in_point < out_point && p1 < p2) {
+            rct = playpos_bar;
+            rct.x = p2 - 1;
+            rct.w = 1;
+            SDL_FillRect(mainSurface, &rct, SDL_MapRGB(mainSurface->format,144,191,191));
+        }
+    }
+
     SDL_FillRect(mainSurface, &playpos_thumb,
         (mouse_drag == MOUSE_DRAG_THUMB ?
             SDL_MapRGB(mainSurface->format,191,255,255) :
