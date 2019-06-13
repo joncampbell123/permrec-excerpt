@@ -1247,6 +1247,14 @@ struct QueueEntry {
     ~QueueEntry() {
         free();
     }
+    double duration(void) {
+        if (frame != NULL) {
+            if (frame->sample_rate > 0)
+                return double(frame->nb_samples) / frame->sample_rate;
+        }
+
+        return 0;
+    }
     void free(void) {
         free_frame();
     }
@@ -1938,7 +1946,7 @@ void Play_Idle(void) {
 
                 /* I'm not gonna take you back to the past,
                  * to play stale old audio fragments that have passed. */
-                if (current_audio_frame.pt >= (play_in_time-0.01))
+                if (current_audio_frame.pt >= (play_in_time-0.005-current_audio_frame.duration()))
                     send_audio_frame(current_audio_frame);
             }
 
