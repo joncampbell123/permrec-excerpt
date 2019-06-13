@@ -520,6 +520,22 @@ enum {
     MOUSE_DRAG_THUMB=1
 };
 
+void MouseDragThumb(int x,int y) {
+    if (playpos_thumb.w == 0)
+        return;
+    if (playpos_bar.w == 0)
+        return;
+
+    double np = double(x) - double(playpos_bar.x);
+    np /= double(playpos_bar.w);
+    if (np < 0) np = 0;
+    if (np > 1) np = 1;
+    np *= play_duration;
+
+    double dt = np - play_in_time;
+    do_seek_rel(dt);
+}
+
 bool GUI_Idle(void) {
     SDL_Event event;
 
@@ -529,6 +545,12 @@ bool GUI_Idle(void) {
         }
         else if (event.type == SDL_WINDOWEVENT) {
             GUI_OnWindowEvent(event.window);
+        }
+        else if (event.type == SDL_MOUSEMOTION) {
+            if (mouse_drag == MOUSE_DRAG_THUMB) {
+                MouseDragThumb(event.motion.x,event.motion.y);
+                gui_redraw = true;
+            }
         }
         else if (event.type == SDL_MOUSEBUTTONDOWN) {
             if (playpos_thumb.w > 0 && playpos_thumb.h > 0) {
@@ -549,6 +571,9 @@ bool GUI_Idle(void) {
         }
         else if (event.type == SDL_MOUSEBUTTONUP) {
             if (mouse_drag >= 0) {
+                if (mouse_drag == MOUSE_DRAG_THUMB)
+                    MouseDragThumb(event.button.x,event.button.y);
+
                 mouse_drag = -1;
                 gui_redraw = true;
             }
