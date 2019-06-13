@@ -1046,6 +1046,8 @@ public:
         ft = 0u;
         if (avfmt == NULL || pkt == NULL)
             return NULL;
+        if (pkt->size == 0 || pkt->data == NULL)
+            return NULL;
 
         if (size_t(pkt->stream_index) >= size_t(avfmt->nb_streams))
             return NULL;
