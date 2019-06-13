@@ -1648,7 +1648,17 @@ void next_stream_of_type(const int type,int &in_file_stream) {
             AVStream *s = fp.avfmt_stream(size_t(in_file_stream));
             if (s != NULL) {
                 if (s->codec->codec_type == type) {
-                    break;
+                    if (type == AVMEDIA_TYPE_VIDEO) {
+                        if (s->codec->width > 0 && s->codec->height > 0)
+                            break;
+                    }
+                    else if (type == AVMEDIA_TYPE_AUDIO) {
+                        if (s->codec->sample_rate > 0 && s->codec->channels > 0)
+                            break;
+                    }
+                    else {
+                        break;
+                    }
                 }
             }
 
