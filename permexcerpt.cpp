@@ -547,7 +547,7 @@ void MouseDragThumb(int x,int y) {
 bool GUI_Idle(void) {
     SDL_Event event;
 
-    if (SDL_PollEvent(&event)) {
+    while (SDL_PollEvent(&event)) {
         if (event.type == SDL_QUIT) {
             quitting_app = true;
         }
@@ -651,6 +651,8 @@ bool GUI_Idle(void) {
 
         gui_redraw_at_play_time = play_in_time + 0.1;
     }
+
+    SDL_Delay(is_playing() ? 1 : (1000/15));
 
     return !(quitting_app);
 }
