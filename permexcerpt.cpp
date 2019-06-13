@@ -1958,10 +1958,12 @@ void Play_Idle(void) {
         do_stop();
 
     if (fp.is_open()) {
-        size_t times = 128;
+        size_t times;
 
+        times = 128;
+        notfull = true;
         while (times-- > 0) {
-            if (video_queue.size() >= 64 || audio_queue.size() >= 256)
+            if (video_queue.size() >= 32 || audio_queue.size() >= 128)
                 notfull = false;
 
             if (!is_playing() && in_file_video_stream >= 0 && !video_queue.empty() && current_video_frame.frame == NULL)
