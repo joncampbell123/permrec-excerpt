@@ -1901,12 +1901,45 @@ void next_audio_stream(void) {
     do_seek_rel(0);
 }
 
+bool paused_need_frame = false;
+
+void process_video_queue(void) {
+    while (!video_queue.empty()) {
+        auto &ent = video_queue.front();
+        if ((is_playing() && play_in_time >= ent.pt) || paused_need_frame) {
+            current_video_frame = std::move(ent);
+            video_queue.pop();
+            current_video_frame.update = true;
+            paused_need_frame = false;
+        }
+        else {
+            break;
+        }
+    }
+}
+
+void process_audio_queue(void) {
+    while (!audio_queue.empty()) {
+        auto &ent = audio_queue.front();
+        if (is_playing() && audio_queue_delay() < 0.2 && play_in_time >= (ent.pt - audio_queue_delay())) {
+            current_audio_frame = std::move(ent);
+            audio_queue.pop();
+
+            /* I'm not gonna take you back to the past,
+             * to play stale old audio fragments that have passed. */
+            if (current_audio_frame.pt >= (play_in_time-0.005-current_audio_frame.duration()))
+                send_audio_frame(current_audio_frame);
+        }
+
+        break;
+    }
+}
+
 void Play_Idle(void) {
     unsigned int ft;
     AVFrame *fr = NULL;
     bool notfull = true;
     auto &fp = current_file();
-    bool paused_need_frame = false;
 
     if (is_playing() && !fp.is_open())
         do_stop();
@@ -1968,33 +2001,8 @@ void Play_Idle(void) {
         }
 
         get_play_time_now();
-        while (!video_queue.empty()) {
-            auto &ent = video_queue.front();
-            if ((is_playing() && play_in_time >= ent.pt) || paused_need_frame) {
-                current_video_frame = std::move(ent);
-                video_queue.pop();
-                current_video_frame.update = true;
-                paused_need_frame = false;
-            }
-            else {
-                break;
-            }
-        }
-
-        while (!audio_queue.empty()) {
-            auto &ent = audio_queue.front();
-            if (is_playing() && audio_queue_delay() < 0.2 && play_in_time >= (ent.pt - audio_queue_delay())) {
-                current_audio_frame = std::move(ent);
-                audio_queue.pop();
-
-                /* I'm not gonna take you back to the past,
-                 * to play stale old audio fragments that have passed. */
-                if (current_audio_frame.pt >= (play_in_time-0.005-current_audio_frame.duration()))
-                    send_audio_frame(current_audio_frame);
-            }
-
-            break;
-        }
+        process_video_queue();
+        process_audio_queue();
     }
 
     if (current_video_frame.update && current_video_frame.frame != NULL) {
