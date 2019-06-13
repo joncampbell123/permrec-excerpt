@@ -1962,6 +1962,9 @@ void Play_Idle(void) {
 
         times = 512;
         while (times-- > 0) {
+            if (video_queue_pkt.size() >= 512 || audio_queue_pkt.size() >= 2048)
+                break;
+
             AVPacket *pkt = in_file.read_packet();
             if (pkt == NULL) break;
 
@@ -1977,12 +1980,12 @@ void Play_Idle(void) {
             }
         }
 
-        times = 4;
+        times = 32;
         while (times-- > 0) {
             if (!is_playing() && in_file_video_stream >= 0 && !video_queue.empty() && current_video_frame.frame == NULL)
                 paused_need_frame = true;
 
-            if (video_queue.size() < 32 && !video_queue_pkt.empty()) {
+            if (video_queue.size() < 64 && !video_queue_pkt.empty()) {
                 QueueEntry ent = std::move(video_queue_pkt.front());
                 video_queue_pkt.pop();
                 AVPacket *pkt = ent.packet;
@@ -2006,7 +2009,7 @@ void Play_Idle(void) {
             }
         }
 
-        times = 64;
+        times = 128;
         while (times-- > 0) {
             if (audio_queue.size() < 256 && !audio_queue_pkt.empty()) {
                 QueueEntry ent = std::move(audio_queue_pkt.front());
