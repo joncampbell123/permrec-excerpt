@@ -533,9 +533,15 @@ bool GUI_Idle(void) {
         else if (event.type == SDL_MOUSEBUTTONDOWN) {
             if (playpos_thumb.w > 0 && playpos_thumb.h > 0) {
                 SDL_Point p;
+                SDL_Rect tmp;
+                tmp = playpos_thumb;
+                tmp.x -= 8;
+                tmp.w += 8*2;
+                tmp.y -= 4;
+                tmp.h += 4*2;
                 p.x = event.button.x;
                 p.y = event.button.y;
-                if (SDL_PointInRect(&p,&playpos_thumb)) {
+                if (SDL_PointInRect(&p,&tmp)) {
                     mouse_drag = MOUSE_DRAG_THUMB;
                     gui_redraw = true;
                 }
