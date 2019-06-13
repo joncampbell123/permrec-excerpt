@@ -541,10 +541,16 @@ bool GUI_Idle(void) {
                 next_audio_stream();
             }
             else if (event.key.keysym.sym == SDLK_LEFT) {
-                do_seek_rel(-5);
+                if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
+                    do_seek_rel(-60);
+                else
+                    do_seek_rel(-5);
             }
             else if (event.key.keysym.sym == SDLK_RIGHT) {
-                do_seek_rel(5);
+                if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
+                    do_seek_rel(60);
+                else
+                    do_seek_rel(5);
             }
         }
     }
