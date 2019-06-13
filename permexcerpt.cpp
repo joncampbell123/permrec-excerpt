@@ -1253,6 +1253,7 @@ struct QueueEntry {
     QueueEntry(QueueEntry &&ent) {
         free();
 
+        packet = ent.packet; ent.packet = NULL;
         frame = ent.frame; ent.frame = NULL;
         pt = ent.pt; ent.pt = 0;
     }
@@ -1260,6 +1261,7 @@ struct QueueEntry {
     QueueEntry& operator=(QueueEntry &&ent) {
         free();
 
+        packet = ent.packet; ent.packet = NULL;
         frame = ent.frame; ent.frame = NULL;
         pt = ent.pt; ent.pt = 0;
         return *this;
@@ -1277,6 +1279,10 @@ struct QueueEntry {
     }
     void free(void) {
         free_frame();
+        free_packet();
+    }
+    void free_packet(void) {
+        av_packet_free(&packet);
     }
     void free_frame(void) {
         av_frame_free(&frame);
@@ -1284,6 +1290,7 @@ struct QueueEntry {
     bool                    update = false;
     bool                    done = false;
     AVFrame*                frame = NULL;
+    AVPacket*               packet = NULL;
     double                  pt = 0;
     AVRational              container_ar = {0,0};
 };
@@ -1331,8 +1338,10 @@ ScalerTrack                     video_scaler_trk;
 SwsContext*                     video_scaler = NULL;
 QueueEntry                      current_video_frame;
 std::queue<QueueEntry>          video_queue;
+std::queue<QueueEntry>          video_queue_pkt;
 QueueEntry                      current_audio_frame;
 std::queue<QueueEntry>          audio_queue;
+std::queue<QueueEntry>          audio_queue_pkt;
 
 void clear_current_av(void) {
     current_video_frame.free();
@@ -1350,6 +1359,8 @@ void flush_queue(queue<QueueEntry> &m) {
 void flush_queue(void) {
     flush_queue(video_queue);
     flush_queue(audio_queue);
+    flush_queue(video_queue_pkt);
+    flush_queue(audio_queue_pkt);
 }
 
 bool schedule_video_frame(double pt,AVFrame *fr,AVStream *avs) {
@@ -1884,6 +1895,7 @@ void next_video_stream(void) {
     recompute_start_adj();
     sdl_audio_queue_flush();
     flush_queue(video_queue);
+    flush_queue(video_queue_pkt);
     fp.reset_codec(size_t(in_file_video_stream));
     do_seek_rel(0);
 }
@@ -1897,6 +1909,7 @@ void next_audio_stream(void) {
     recompute_start_adj();
     sdl_audio_queue_flush();
     flush_queue(audio_queue);
+    flush_queue(audio_queue_pkt);
     fp.reset_codec(size_t(in_file_audio_stream));
     do_seek_rel(0);
 }
