@@ -514,6 +514,12 @@ bool is_playing(void);
 void do_play(void);
 void do_stop(void);
 
+int mouse_drag = -1;
+
+enum {
+    MOUSE_DRAG_THUMB=1
+};
+
 bool GUI_Idle(void) {
     SDL_Event event;
 
@@ -523,6 +529,23 @@ bool GUI_Idle(void) {
         }
         else if (event.type == SDL_WINDOWEVENT) {
             GUI_OnWindowEvent(event.window);
+        }
+        else if (event.type == SDL_MOUSEBUTTONDOWN) {
+            if (playpos_thumb.w > 0 && playpos_thumb.h > 0) {
+                SDL_Point p;
+                p.x = event.button.x;
+                p.y = event.button.y;
+                if (SDL_PointInRect(&p,&playpos_thumb)) {
+                    mouse_drag = MOUSE_DRAG_THUMB;
+                    gui_redraw = true;
+                }
+            }
+        }
+        else if (event.type == SDL_MOUSEBUTTONUP) {
+            if (mouse_drag >= 0) {
+                mouse_drag = -1;
+                gui_redraw = true;
+            }
         }
         else if (event.type == SDL_KEYDOWN) {
             if (event.key.keysym.sym == SDLK_ESCAPE) {
@@ -1620,7 +1643,10 @@ void DrawPlayPos(void) {
 
     SDL_FillRect(mainSurface, &playpos_region, SDL_MapRGB(mainSurface->format,31,31,31));
     SDL_FillRect(mainSurface, &playpos_bar,    SDL_MapRGB(mainSurface->format,63,63,63));
-    SDL_FillRect(mainSurface, &playpos_thumb,  SDL_MapRGB(mainSurface->format,160,160,160));
+    SDL_FillRect(mainSurface, &playpos_thumb,
+        (mouse_drag == MOUSE_DRAG_THUMB ?
+            SDL_MapRGB(mainSurface->format,191,255,255) :
+            SDL_MapRGB(mainSurface->format,160,160,160)));
 
     if (playpos_time.w > 0 && playpos_time.h > 0) {
         int cs = int(floor((play_in_time * 100) + 0.01));
