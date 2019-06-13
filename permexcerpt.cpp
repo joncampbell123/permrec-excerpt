@@ -652,7 +652,7 @@ bool GUI_Idle(void) {
         gui_redraw_at_play_time = play_in_time + 0.1;
     }
 
-    SDL_Delay(is_playing() ? 1 : (1000/15));
+    SDL_Delay(is_playing() ? 1 : (1000/100));
 
     return !(quitting_app);
 }
@@ -1895,35 +1895,46 @@ void Play_Idle(void) {
         do_stop();
 
     if (fp.is_open()) {
-        if (video_queue.size() >= 64 || audio_queue.size() >= 256)
-            notfull = false;
+        size_t times = 128;
 
-        if (!is_playing() && in_file_video_stream >= 0 && !video_queue.empty() && current_video_frame.frame == NULL)
-            paused_need_frame = true;
+        while (times-- > 0) {
+            if (video_queue.size() >= 64 || audio_queue.size() >= 256)
+                notfull = false;
 
-        if (notfull) {
-            AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
-            if (pkt != NULL) {
-                if (pkt->stream_index == in_file_video_stream) {
-                    fr = in_file.decode_frame(pkt,/*&*/ft);
-                    if (fr != NULL) {
-                        if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                            av_frame_free(&fr);
+            if (!is_playing() && in_file_video_stream >= 0 && !video_queue.empty() && current_video_frame.frame == NULL)
+                paused_need_frame = true;
+
+            if (notfull) {
+                AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
+                if (pkt != NULL) {
+                    if (pkt->stream_index == in_file_video_stream) {
+                        fr = in_file.decode_frame(pkt,/*&*/ft);
+                        if (fr != NULL) {
+                            if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                                av_frame_free(&fr);
+                            }
+                        }
+                    }
+                    else if (pkt->stream_index == in_file_audio_stream) {
+                        fr = in_file.decode_frame(pkt,/*&*/ft);
+                        if (fr != NULL) {
+                            if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                                av_frame_free(&fr);
+                            }
                         }
                     }
                 }
-                else if (pkt->stream_index == in_file_audio_stream) {
-                    fr = in_file.decode_frame(pkt,/*&*/ft);
-                    if (fr != NULL) {
-                        if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                            av_frame_free(&fr);
-                        }
+                else {
+                    if (in_file.is_eof()) {
+                        if (video_queue.empty() && audio_queue.empty())
+                            do_stop();
                     }
+
+                    times = 0;
                 }
             }
-            else if (in_file.is_eof()) {
-                if (video_queue.empty() && audio_queue.empty())
-                    do_stop();
+            else {
+                times = 0;
             }
         }
 
