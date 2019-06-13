@@ -1780,7 +1780,11 @@ void Play_Idle(void) {
             if (is_playing() && audio_queue_delay() < 0.2 && play_in_time >= (ent.pt - audio_queue_delay())) {
                 current_audio_frame = std::move(ent);
                 audio_queue.pop();
-                send_audio_frame(current_audio_frame);
+
+                /* I'm not gonna take you back to the past,
+                 * to play stale old audio fragments that have passed. */
+                if (current_audio_frame.pt >= (play_in_time-0.01))
+                    send_audio_frame(current_audio_frame);
             }
 
             break;
