@@ -1064,6 +1064,10 @@ public:
             if (rd < 0 || !got_frame || strm.frame->width == 0 || strm.frame->height == 0)
                 return NULL;
 
+            if (rd > pkt->size) rd = pkt->size;
+            pkt->data += rd;
+            pkt->size -= rd;
+
             AVFrame *fr = av_frame_clone(strm.frame);
             if (fr == NULL)
                 return NULL;
@@ -1077,6 +1081,10 @@ public:
             rd = avcodec_decode_audio4(avc,strm.frame,&got_frame,pkt);
             if (rd < 0 || !got_frame || strm.frame->nb_samples == 0)
                 return NULL;
+
+            if (rd > pkt->size) rd = pkt->size;
+            pkt->data += rd;
+            pkt->size -= rd;
 
             AVFrame *fr = av_frame_clone(strm.frame);
             if (fr == NULL)
@@ -1908,20 +1916,32 @@ void Play_Idle(void) {
                 AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
                 if (pkt != NULL) {
                     if (pkt->stream_index == in_file_video_stream) {
-                        fr = in_file.decode_frame(pkt,/*&*/ft);
-                        if (fr != NULL) {
-                            if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                                av_frame_free(&fr);
+                        do {
+                            fr = in_file.decode_frame(pkt,/*&*/ft);
+                            if (fr != NULL) {
+                                if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                                    av_frame_free(&fr);
+                                }
                             }
-                        }
+                            else {
+                                break;
+                            }
+                        } while(1);
                     }
                     else if (pkt->stream_index == in_file_audio_stream) {
-                        fr = in_file.decode_frame(pkt,/*&*/ft);
-                        if (fr != NULL) {
-                            if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                                av_frame_free(&fr);
+                        // in some cases (old ASF files) the AVPacket contains multiple audio frames,
+                        // and the decoder will only decode ONE.
+                        do {
+                            fr = in_file.decode_frame(pkt,/*&*/ft);
+                            if (fr != NULL) {
+                                if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                                    av_frame_free(&fr);
+                                }
                             }
-                        }
+                            else {
+                                break;
+                            }
+                        } while(1);
                     }
                 }
                 else {
