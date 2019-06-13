@@ -877,10 +877,17 @@ public:
         if (s != NULL) {
             fprintf(stderr,"Stream %zu: Stream time_base=%llu/%llu",i,
                 static_cast<unsigned long long>(s->time_base.num),static_cast<unsigned long long>(s->time_base.den));
+
             if (s->start_time != AV_NOPTS_VALUE)
                 fprintf(stderr," start=%lld",static_cast<signed long long>(s->start_time));
             else
                 fprintf(stderr," start=NOPTS");
+
+            if (s->duration != AV_NOPTS_VALUE)
+                fprintf(stderr," duration=%lld",static_cast<signed long long>(s->duration));
+            else
+                fprintf(stderr," duration=NOPTS");
+ 
             fprintf(stderr,"\n");
         }
 
