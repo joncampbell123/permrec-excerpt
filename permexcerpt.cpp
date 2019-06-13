@@ -515,6 +515,7 @@ void do_seek_rel(double dt);
 void next_video_stream(void);
 void next_audio_stream(void);
 void DrawVideoFrame(void);
+void do_export_ui(void);
 void DrawPlayPos(void);
 bool is_playing(void);
 void do_play(void);
@@ -611,6 +612,9 @@ bool GUI_Idle(void) {
             }
             else if (event.key.keysym.sym == SDLK_a) {
                 next_audio_stream();
+            }
+            else if (event.key.keysym.sym == SDLK_x) {
+                do_export_ui();
             }
             else if (event.key.keysym.sym == SDLK_LEFTBRACKET) {
                 if (in_point >= 0)
@@ -1244,6 +1248,10 @@ void do_stop(void) {
         gui_redraw = true;
         playing = false;
     }
+}
+
+void do_export_ui(void) {
+    // TODO
 }
 
 struct QueueEntry {
