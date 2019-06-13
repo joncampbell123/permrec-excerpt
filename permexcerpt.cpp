@@ -1951,67 +1951,90 @@ void process_audio_queue(void) {
 void Play_Idle(void) {
     unsigned int ft;
     AVFrame *fr = NULL;
-    bool notfull = true;
     auto &fp = current_file();
 
     if (is_playing() && !fp.is_open())
         do_stop();
 
     if (fp.is_open()) {
+        bool active = false;
         size_t times;
 
-        times = 128;
-        notfull = true;
+        times = 512;
         while (times-- > 0) {
-            if (video_queue.size() >= 32 || audio_queue.size() >= 128)
-                notfull = false;
+            AVPacket *pkt = in_file.read_packet();
+            if (pkt == NULL) break;
 
+            if (pkt->stream_index == in_file_video_stream) {
+                QueueEntry ent;
+                ent.packet = av_packet_clone(pkt);
+                video_queue_pkt.push(std::move(ent));
+            }
+            else if (pkt->stream_index == in_file_audio_stream) {
+                QueueEntry ent;
+                ent.packet = av_packet_clone(pkt);
+                audio_queue_pkt.push(std::move(ent));
+            }
+        }
+
+        times = 4;
+        while (times-- > 0) {
             if (!is_playing() && in_file_video_stream >= 0 && !video_queue.empty() && current_video_frame.frame == NULL)
                 paused_need_frame = true;
 
-            if (notfull) {
-                AVPacket *pkt = in_file.read_packet(); // no need to free, invalidated at next call
-                if (pkt != NULL) {
-                    if (pkt->stream_index == in_file_video_stream) {
-                        do {
-                            fr = in_file.decode_frame(pkt,/*&*/ft);
-                            if (fr != NULL) {
-                                if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                                    av_frame_free(&fr);
-                                }
+            if (video_queue.size() < 32 && !video_queue_pkt.empty()) {
+                QueueEntry ent = std::move(video_queue_pkt.front());
+                video_queue_pkt.pop();
+                AVPacket *pkt = ent.packet;
+                active = true;
+                if (pkt != NULL && pkt->stream_index == in_file_video_stream) {
+                    do {
+                        fr = in_file.decode_frame(pkt,/*&*/ft);
+                        if (fr != NULL) {
+                            if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                                av_frame_free(&fr);
                             }
-                            else {
-                                break;
-                            }
-                        } while(1);
-                    }
-                    else if (pkt->stream_index == in_file_audio_stream) {
-                        // in some cases (old ASF files) the AVPacket contains multiple audio frames,
-                        // and the decoder will only decode ONE.
-                        do {
-                            fr = in_file.decode_frame(pkt,/*&*/ft);
-                            if (fr != NULL) {
-                                if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
-                                    av_frame_free(&fr);
-                                }
-                            }
-                            else {
-                                break;
-                            }
-                        } while(1);
-                    }
-                }
-                else {
-                    if (in_file.is_eof()) {
-                        if (video_queue.empty() && audio_queue.empty())
-                            do_stop();
-                    }
-
-                    times = 0;
+                        }
+                        else {
+                            break;
+                        }
+                    } while(1);
                 }
             }
             else {
-                times = 0;
+                break;
+            }
+        }
+
+        times = 64;
+        while (times-- > 0) {
+            if (audio_queue.size() < 256 && !audio_queue_pkt.empty()) {
+                QueueEntry ent = std::move(audio_queue_pkt.front());
+                audio_queue_pkt.pop();
+                AVPacket *pkt = ent.packet;
+                active = true;
+                if (pkt != NULL && pkt->stream_index == in_file_audio_stream) {
+                    // in some cases (old ASF files) the AVPacket contains multiple audio frames,
+                    // and the decoder will only decode ONE.
+                    do {
+                        fr = in_file.decode_frame(pkt,/*&*/ft);
+                        if (fr != NULL) {
+                            if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                                av_frame_free(&fr);
+                            }
+                        }
+                        else {
+                            break;
+                        }
+                    } while(1);
+                }
+            }
+        }
+
+        if (!active) {
+            if (in_file.is_eof()) {
+                if (video_queue.empty() && audio_queue.empty() && video_queue_pkt.empty() && audio_queue_pkt.empty())
+                    do_stop();
             }
         }
 
