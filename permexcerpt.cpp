@@ -1222,7 +1222,7 @@ bool schedule_video_frame(double pt,AVFrame *fr,AVStream *avs) {
     ent.frame = fr;
     ent.pt = pt;
     video_queue.push(std::move(ent));
-    fprintf(stderr,"Queued video frame pt=%.3f\n",pt);
+//    fprintf(stderr,"Queued video frame pt=%.3f\n",pt);
     return true;
 }
 
@@ -1231,7 +1231,7 @@ bool schedule_audio_frame(double pt,AVFrame *fr) {
     ent.frame = fr;
     ent.pt = pt;
     audio_queue.push(std::move(ent));
-    fprintf(stderr,"Queued audio frame pt=%.3f\n",pt);
+//    fprintf(stderr,"Queued audio frame pt=%.3f\n",pt);
     return true;
 }
 
