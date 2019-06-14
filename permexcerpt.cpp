@@ -1499,6 +1499,8 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         }
     }
 
+    av_dump_format(ofmt_ctx, 0, out_filename.c_str(), 1);
+
     // TODO
 
     // TODO
