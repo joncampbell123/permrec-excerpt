@@ -1665,6 +1665,9 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
             keyframe[out_stream] = true;
         }
 
+        if (pt > out_point)
+            continue;
+
         AVPacket* outpkt = av_packet_clone(pkt);
         if (outpkt != NULL) {
             int64_t adj;
