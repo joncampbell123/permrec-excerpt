@@ -1429,6 +1429,7 @@ bool do_prompt(std::string &str,const std::string &title) {
 }
 
 void do_export(const std::string &out_filename,double in_point,double out_point) {
+    bool keyframe[2] = {false,false};
     int64_t last_next_pts[2] = {0,0};
     AVStream *out_video_stream = NULL;
     AVStream *out_audio_stream = NULL;
@@ -1549,6 +1550,19 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
 
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
+
+        if (pt > (out_point + 5.0))
+            break; // that's far enough
+        if (pt < in_point)
+            continue;
+
+        if (keyframe[out_stream] == false) {
+            if (!(pkt->flags & AV_PKT_FLAG_KEY))
+                continue;
+
+            fprintf(stderr,"Output stream %d first keyframe\n",out_stream);
+            keyframe[out_stream] = true;
+        }
 
         fprintf(stderr,"%.3f\n",pt);
 
