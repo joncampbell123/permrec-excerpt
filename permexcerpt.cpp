@@ -1501,12 +1501,31 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
 
     av_dump_format(ofmt_ctx, 0, out_filename.c_str(), 1);
 
+    if (!(ofmt->flags & AVFMT_NOFILE)) {
+        ret = avio_open(&ofmt_ctx->pb, out_filename.c_str(), AVIO_FLAG_WRITE);
+        if (ret < 0) {
+            fprintf(stderr,"Failed to open output file\n");
+            goto fail;
+        }
+    }
+
+    ret = avformat_write_header(ofmt_ctx, &mp4_dict);
+    if (ret < 0) {
+        fprintf(stderr,"Failed to write header\n");
+        goto fail;
+    }
+
     // TODO
 
     // TODO
 
 fail:
     if (ofmt_ctx != NULL) {
+        if (ofmt_ctx->pb != NULL) {
+            fprintf(stderr,"Writing trailer\n");
+            av_write_trailer(ofmt_ctx);
+        }
+
         if (!(ofmt->flags & AVFMT_NOFILE)) {
             fprintf(stderr,"Closing pb\n");
             avio_closep(&ofmt_ctx->pb);
