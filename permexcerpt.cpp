@@ -1567,6 +1567,8 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (keyframe[out_stream] == false) {
             if (!(pkt->flags & AV_PKT_FLAG_KEY))
                 continue;
+            if (pts == AV_NOPTS_VALUE) // muxers get grumpy without timestamps
+                continue;
 
             fprintf(stderr,"Output stream %d first keyframe\n",out_stream);
             keyframe[out_stream] = true;
