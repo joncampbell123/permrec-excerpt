@@ -1515,10 +1515,10 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         goto fail;
     }
 
-    in_file.seek_to(in_point);
+    fp.seek_to(in_point);
 
     do {
-        AVPacket *pkt = in_file.read_packet();
+        AVPacket *pkt = fp.read_packet();
         if (pkt == NULL) break;
 
         int out_stream = -1;
