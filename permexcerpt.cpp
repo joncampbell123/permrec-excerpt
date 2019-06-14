@@ -1311,6 +1311,12 @@ bool do_prompt(std::string &str,const std::string &title) {
                         str = first + last;
                     }
                 }
+                else if (event.key.keysym.sym == SDLK_HOME) {
+                    cursor_pos = 0;
+                }
+                else if (event.key.keysym.sym == SDLK_END) {
+                    cursor_pos = str.length();
+                }
                 else if (event.key.keysym.sym == SDLK_LEFT) {
                     if (cursor_pos)
                         cursor_pos--;
