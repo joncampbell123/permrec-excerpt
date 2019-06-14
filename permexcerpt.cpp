@@ -1321,6 +1321,9 @@ bool do_prompt(std::string &str,const std::string &title) {
                 else if (event.key.keysym.sym == SDLK_PERIOD) {
                     insert_char = '.';
                 }
+                else if (event.key.keysym.sym == SDLK_COMMA) {
+                    insert_char = ',';
+                }
                 else if (event.key.keysym.sym == SDLK_HOME) {
                     cursor_pos = 0;
                     gui_redraw = true;
