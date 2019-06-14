@@ -2561,7 +2561,9 @@ void Play_Idle(void) {
                                 if (avs != NULL) {
                                     double t = (double(fr->pkt_duration) * avs->time_base.num) / avs->time_base.den;
                                     if (t < 0.03) {
-                                        audio_queue_max++;
+                                        if (audio_queue_max < 4096)
+                                            audio_queue_max++;
+
                                         times++;
                                     }
                                 }
