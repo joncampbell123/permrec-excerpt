@@ -1931,7 +1931,10 @@ bool queue_video_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
         else
             return false;
 
-        video_last_next_pts = pts + fr->pkt_duration;
+        if (fr->pkt_duration != AV_NOPTS_VALUE)
+            video_last_next_pts = pts + fr->pkt_duration;
+        else
+            video_last_next_pts = pts + int64_t(1);
 
         if (!schedule_video_frame(pt,fr,avs))
             return false;
@@ -1961,7 +1964,10 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
         else
             return false;
 
-        audio_last_next_pts = pts + fr->pkt_duration;
+        if (fr->pkt_duration != AV_NOPTS_VALUE)
+            audio_last_next_pts = pts + fr->pkt_duration;
+        else
+            audio_last_next_pts = pts + int64_t(1);
 
         if (!schedule_audio_frame(pt,fr))
             return false;
