@@ -1264,7 +1264,7 @@ void do_progress_bar(double t,double total) {
     SDL_Rect box,progress;
     us_time_t now = monotonic_clock_us();
 
-    if (now >= (progress_last_update + us_time_t(250000))) { /* 250ms */
+    if (now >= (progress_last_update + us_time_t(50000))) { /* 50ms */
         progress_last_update = now;
         gui_redraw = true;
     }
