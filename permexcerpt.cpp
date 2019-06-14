@@ -1258,6 +1258,45 @@ void do_stop(void) {
 void Play_Idle(void);
 void vga_print_font(int x,int y,const char *str);
 
+us_time_t progress_last_update = 0;
+
+void do_progress_bar(double t,double total) {
+    SDL_Rect box,progress;
+    us_time_t now = monotonic_clock_us();
+
+    if (now >= (progress_last_update + us_time_t(250000))) { /* 250ms */
+        progress_last_update = now;
+        gui_redraw = true;
+    }
+
+    if (gui_redraw) {
+        SDL_LockSurface(mainSurface);
+        gui_redraw_do_locked();
+
+        box.x = 8;
+        box.y = (mainSurface->h - 16) / 2;
+        box.w = (mainSurface->w - 8 - box.x);
+        box.h = 16;
+
+        {
+            double p = t / total;
+            if (p < 0) p = 0;
+            if (p > 1) p = 1;
+            progress = box;
+            progress.w = static_cast<int>(p * box.w);
+        }
+
+        SDL_FillRect(mainSurface, &box,         SDL_MapRGB(mainSurface->format, 15, 15, 15));
+        SDL_FillRect(mainSurface, &progress,    SDL_MapRGB(mainSurface->format,191,191,191));
+
+        SDL_UnlockSurface(mainSurface);
+        SDL_UpdateWindowSurface(mainWindow);
+        gui_redraw = false;
+
+        gui_redraw_at_play_time = play_in_time + 0.1;
+    }
+}
+
 bool do_prompt(std::string &str,const std::string &title) {
     size_t cursor_pos = str.length();
     int title_x = 0,title_y = 0;
@@ -1445,6 +1484,8 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     if (in_file_video_stream < 0 || in_file_audio_stream < 0)
         return;
 
+    progress_last_update = 0;
+
     avformat_alloc_output_context2(&ofmt_ctx, NULL, fmtname, out_filename.c_str());
     if (!ofmt_ctx) {
         fprintf(stderr,"Failed to open output context\n");
@@ -1452,6 +1493,8 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     }
     ofmt = ofmt_ctx->oformat;
     assert(ofmt != NULL);
+
+    do_progress_bar(0,out_point - in_point);
 
     if (in_file_video_stream >= 0) {
         AVStream *s = fp.avfmt_stream(size_t(in_file_video_stream));
@@ -1564,6 +1607,9 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (pt < in_point)
             continue;
 
+        if (pts != AV_NOPTS_VALUE)
+            do_progress_bar(pt - in_point,out_point - in_point);
+
         if (keyframe[out_stream] == false) {
             if (!(pkt->flags & AV_PKT_FLAG_KEY))
                 continue;
@@ -1620,6 +1666,7 @@ fail:
     }
 
     do_seek_rel(0);
+    gui_redraw = true;
 }
 
 void do_export_ui(void) {
