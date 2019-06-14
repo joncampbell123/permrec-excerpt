@@ -1283,7 +1283,10 @@ void do_progress_bar(double t,double total) {
             if (p < 0) p = 0;
             if (p > 1) p = 1;
             progress = box;
-            progress.w = static_cast<int>(p * box.w);
+            progress.w  = static_cast<int>(p * (box.w - 2));
+            progress.h -= 2;
+            progress.y += 1;
+            progress.x += 1;
         }
 
         SDL_FillRect(mainSurface, &box,         SDL_MapRGB(mainSurface->format, 15, 15, 15));
