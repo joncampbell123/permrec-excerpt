@@ -1475,7 +1475,7 @@ bool do_prompt(std::string &str,const std::string &title) {
 
 void do_export(const std::string &out_filename,double in_point,double out_point) {
     bool keyframe[2] = {false,false};
-    int64_t last_next_pts[2] = {0,0};
+    int64_t last_next_pts[2] = {-1,-1};
     AVStream *out_video_stream = NULL;
     AVStream *out_audio_stream = NULL;
     AVFormatContext *ofmt_ctx = NULL;
@@ -1616,10 +1616,13 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (pts == AV_NOPTS_VALUE)
             pts = last_next_pts[out_stream];
 
+        if (pts <= last_next_pts[out_stream])
+            pts = last_next_pts[out_stream] + int64_t(1);
+
         if (pkt->duration != AV_NOPTS_VALUE)
-            last_next_pts[out_stream] = pts + std::max(pkt->duration,int64_t(1));
+            last_next_pts[out_stream] = pts + pkt->duration;
         else
-            last_next_pts[out_stream] = pts + int64_t(1);
+            last_next_pts[out_stream] = pts;
 
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
