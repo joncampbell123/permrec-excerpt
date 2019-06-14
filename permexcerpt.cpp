@@ -1564,7 +1564,11 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
             keyframe[out_stream] = true;
         }
 
-        fprintf(stderr,"%.3f\n",pt);
+        AVPacket* outpkt = av_packet_clone(pkt);
+        if (outpkt != NULL) {
+            // TODO
+            av_packet_free(&outpkt);
+        }
 
         last_next_pts[out_stream] = pts + pkt->duration;
     } while(1);
