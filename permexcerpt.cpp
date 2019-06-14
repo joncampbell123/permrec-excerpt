@@ -1618,6 +1618,8 @@ fail:
         ofmt_ctx = NULL;
         ofmt = NULL;
     }
+
+    do_seek_rel(0);
 }
 
 void do_export_ui(void) {
