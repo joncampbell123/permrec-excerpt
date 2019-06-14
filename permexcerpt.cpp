@@ -1429,10 +1429,16 @@ bool do_prompt(std::string &str,const std::string &title) {
 }
 
 void do_export(const std::string &out_filename,double in_point,double out_point) {
+    AVStream *out_video_stream = NULL;
+    AVStream *out_audio_stream = NULL;
     AVFormatContext *ofmt_ctx = NULL;
     AVDictionary *mp4_dict = NULL;
     AVOutputFormat *ofmt = NULL;
     const char *fmtname = NULL;
+    auto &fp = current_file();
+    int audio_stream = -1;
+    int video_stream = -1;
+    int ret;
 
     if (in_file_video_stream < 0 || in_file_audio_stream < 0)
         return;
@@ -1445,10 +1451,59 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     ofmt = ofmt_ctx->oformat;
     assert(ofmt != NULL);
 
-    // TODO
+    if (in_file_video_stream >= 0) {
+        AVStream *s = fp.avfmt_stream(size_t(in_file_video_stream));
+        if (s != NULL) {
+            out_video_stream = avformat_new_stream(ofmt_ctx, s->codec->codec);
+            if (out_video_stream == NULL) {
+                fprintf(stderr,"Failed to create new video stream\n");
+                goto fail;
+            }
+
+            ret = avcodec_copy_context(out_video_stream->codec, s->codec);
+            if (ret < 0) {
+                fprintf(stderr,"Failed to copy video context\n");
+                goto fail;
+            }
+
+            out_video_stream->codec->codec_tag = 0;
+            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+                out_video_stream->codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+            video_stream = out_video_stream->index;
+            fprintf(stderr,"Output video stream %d\n",video_stream);
+        }
+    }
+
+    if (in_file_audio_stream >= 0) {
+        AVStream *s = fp.avfmt_stream(size_t(in_file_audio_stream));
+        if (s != NULL) {
+            out_audio_stream = avformat_new_stream(ofmt_ctx, s->codec->codec);
+            if (out_audio_stream == NULL) {
+                fprintf(stderr,"Failed to create new audio stream\n");
+                goto fail;
+            }
+
+            ret = avcodec_copy_context(out_audio_stream->codec, s->codec);
+            if (ret < 0) {
+                fprintf(stderr,"Failed to copy audio context\n");
+                goto fail;
+            }
+
+            out_audio_stream->codec->codec_tag = 0;
+            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
+                out_audio_stream->codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+
+            audio_stream = out_audio_stream->index;
+            fprintf(stderr,"Output audio stream %d\n",audio_stream);
+        }
+    }
 
     // TODO
 
+    // TODO
+
+fail:
     if (ofmt_ctx != NULL) {
         if (!(ofmt->flags & AVFMT_NOFILE)) {
             fprintf(stderr,"Closing pb\n");
