@@ -2556,6 +2556,7 @@ void Play_Idle(void) {
                         if (fr != NULL) {
                             // HACK: Some MOV files in my test collection cause FFMPEG to decode and render
                             //       audio packets representing extremely tiny segments of audio (1ms??)
+                            //       Specifically, MOV files with QT IMA-ADPCM audio with 64 samples/block.
                             if (fr->pkt_duration != AV_NOPTS_VALUE) {
                                 AVStream *avs = fp.avfmt_stream(size_t(pkt->stream_index));
                                 if (avs != NULL) {
