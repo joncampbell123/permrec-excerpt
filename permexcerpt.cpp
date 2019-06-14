@@ -1293,6 +1293,17 @@ bool do_prompt(std::string &str,const std::string &title) {
                     answer = true;
                     break;
                 }
+                else if (event.key.keysym.sym == SDLK_BACKSPACE) {
+                    if (cursor_pos > str.length())
+                        cursor_pos = str.length();
+
+                    if (cursor_pos > 0) {
+                        std::string last = str.substr(cursor_pos);
+                        cursor_pos--;
+                        std::string first = str.substr(0,cursor_pos);
+                        str = first + last;
+                    }
+                }
             }
         }
 
