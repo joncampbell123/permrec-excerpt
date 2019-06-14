@@ -1347,14 +1347,14 @@ bool do_prompt(std::string &str,const std::string &title) {
 
             cursor_box.x = text_x + (cursor_pos * 8);
             cursor_box.y = text_y;
-            cursor_box.w = 4;
+            cursor_box.w = 2;
             cursor_box.h = 14;
 
             SDL_FillRect(mainSurface, &prompt_box,  SDL_MapRGB(mainSurface->format,15,15,15));
             SDL_FillRect(mainSurface, &title_box,   SDL_MapRGB(mainSurface->format,31,31,31));
             vga_print_font(title_x,title_y,title.c_str());
             vga_print_font(text_x,text_y,str.c_str());
-            SDL_FillRect(mainSurface, &cursor_box,  SDL_MapRGB(mainSurface->format,31,63,63));
+            SDL_FillRect(mainSurface, &cursor_box,  SDL_MapRGB(mainSurface->format,127,191,191));
 
             SDL_UnlockSurface(mainSurface);
             SDL_UpdateWindowSurface(mainWindow);
