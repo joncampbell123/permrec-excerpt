@@ -1480,6 +1480,7 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     AVOutputFormat *ofmt = NULL;
     const char *fmtname = NULL;
     auto &fp = current_file();
+    bool was_playing = false;
     int audio_stream = -1;
     int video_stream = -1;
     int ret;
@@ -1562,6 +1563,9 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         fprintf(stderr,"Failed to write header\n");
         goto fail;
     }
+
+    was_playing = is_playing();
+    do_stop();
 
     fp.seek_to(in_point);
 
@@ -1670,6 +1674,8 @@ fail:
 
     do_seek_rel(0);
     gui_redraw = true;
+
+    if (was_playing) do_play();
 }
 
 void do_export_ui(void) {
