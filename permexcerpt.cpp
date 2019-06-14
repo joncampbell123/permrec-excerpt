@@ -1259,9 +1259,9 @@ void Play_Idle(void);
 void vga_print_font(int x,int y,const char *str);
 
 bool do_prompt(std::string &str,const std::string &title) {
+    size_t cursor_pos = str.length();
     int title_x = 0,title_y = 0;
     int text_x = 0,text_y = 0;
-    int cursor_pos = str.length();
     SDL_Rect cursor_box;
     SDL_Rect prompt_box;
     SDL_Rect title_box;
@@ -1353,12 +1353,12 @@ bool do_prompt(std::string &str,const std::string &title) {
                 }
                 else if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z) {
                     if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
-                        insert_char = 'A' + (event.key.keysym.sym - SDLK_a);
+                        insert_char = char('A' + int(event.key.keysym.sym - SDLK_a));
                     else
-                        insert_char = 'a' + (event.key.keysym.sym - SDLK_a);
+                        insert_char = char('a' + int(event.key.keysym.sym - SDLK_a));
                 }
                 else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9) {
-                    insert_char = '0' + (event.key.keysym.sym - SDLK_0);
+                    insert_char = char('0' + int(event.key.keysym.sym - SDLK_0));
                 }
             }
 
@@ -1389,7 +1389,7 @@ bool do_prompt(std::string &str,const std::string &title) {
             title_box.y = prompt_box.y + 1;
             title_box.h = 14;
 
-            title_x = ((title_box.w - (title.length() * 8)) / 2) + title_box.x;
+            title_x = int(((size_t(title_box.w) - (title.length() * size_t(8))) / size_t(2)) + size_t(title_box.x));
             title_y = title_box.y;
 
             text_x = prompt_box.x + 1;
@@ -1403,7 +1403,7 @@ bool do_prompt(std::string &str,const std::string &title) {
             SDL_LockSurface(mainSurface);
             gui_redraw_do_locked();
 
-            cursor_box.x = text_x + (cursor_pos * 8);
+            cursor_box.x = int(size_t(text_x) + (cursor_pos * size_t(8)));
             cursor_box.y = text_y;
             cursor_box.w = 2;
             cursor_box.h = 14;
