@@ -1467,6 +1467,12 @@ void do_export_ui(void) {
     }
     fprintf(stderr,"User entered = '%s'\n",unamestr.c_str());
 
+    if (unamestr.find_first_of('/') != string::npos ||
+        unamestr.find_first_of('\\') != string::npos) {
+        fprintf(stderr,"Name rejected\n");
+        return;
+    }
+
     std::string final_name = unamestr + ext;
     fprintf(stderr,"Final name = '%s'\n",final_name.c_str());
 }
