@@ -2580,6 +2580,9 @@ void Play_Idle(void) {
                     } while(1);
                 }
             }
+            else {
+                break;
+            }
         }
 
         if (!active) {
