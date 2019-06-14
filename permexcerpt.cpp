@@ -1634,18 +1634,18 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (pts == AV_NOPTS_VALUE)
             pts = last_next_pts[out_stream];
 
-        if (pts <= last_next_pts[out_stream])
-            pts = last_next_pts[out_stream] + int64_t(1);
+        if (pts < last_next_pts[out_stream])
+            pts = last_next_pts[out_stream];
 
         if (pkt->duration != AV_NOPTS_VALUE)
             last_next_pts[out_stream] = pts + pkt->duration;
         else
-            last_next_pts[out_stream] = pts;
+            last_next_pts[out_stream] = pts + int64_t(1);
 
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
 
-        if (pt > (out_point + 60.0))
+        if (pt > (out_point + 10.0))
             break; // that's far enough
         if (pt < in_point)
             continue;
