@@ -1434,6 +1434,9 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     AVOutputFormat *ofmt = NULL;
     const char *fmtname = NULL;
 
+    if (in_file_video_stream < 0 || in_file_audio_stream < 0)
+        return;
+
     avformat_alloc_output_context2(&ofmt_ctx, NULL, fmtname, out_filename.c_str());
     if (!ofmt_ctx) {
         fprintf(stderr,"Failed to open output context\n");
