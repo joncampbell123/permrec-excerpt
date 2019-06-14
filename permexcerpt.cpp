@@ -1738,8 +1738,17 @@ void do_export_ui(void) {
     fprintf(stderr,"from filename = '%s'\n",name.c_str());
     fprintf(stderr,"ext = '%s'\n",ext.c_str());
 
+    std::string basename;
+    {
+        size_t i = name.find_last_of('/');
+        if (i != string::npos)
+            basename = name.substr(i+1);
+        else
+            basename = name;
+    }
+
     /* prompt for file name */
-    std::string unamestr = "untitled-";
+    std::string unamestr = basename + "-";
     {
         char tmp[256];
         sprintf(tmp,"%.2f-%.2f",in_point,out_point);
