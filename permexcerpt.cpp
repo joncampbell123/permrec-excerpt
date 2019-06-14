@@ -1493,6 +1493,10 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
 
     progress_last_update = 0;
 
+    /* .vob does not mean svcd you idiot */
+    if (strstr(out_filename.c_str(),".vob") != NULL)
+        fmtname = "vob";
+
     avformat_alloc_output_context2(&ofmt_ctx, NULL, fmtname, out_filename.c_str());
     if (!ofmt_ctx) {
         fprintf(stderr,"Failed to open output context\n");
