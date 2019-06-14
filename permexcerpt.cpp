@@ -1645,7 +1645,7 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
 
-        if (pt > (out_point + 5.0))
+        if (pt > (out_point + 60.0))
             break; // that's far enough
         if (pt < in_point)
             continue;
