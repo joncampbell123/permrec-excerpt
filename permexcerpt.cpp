@@ -1304,6 +1304,14 @@ bool do_prompt(std::string &str,const std::string &title) {
                         str = first + last;
                     }
                 }
+                else if (event.key.keysym.sym == SDLK_LEFT) {
+                    if (cursor_pos)
+                        cursor_pos--;
+                }
+                else if (event.key.keysym.sym == SDLK_RIGHT) {
+                    if (cursor_pos < str.length())
+                        cursor_pos++;
+                }
             }
         }
 
