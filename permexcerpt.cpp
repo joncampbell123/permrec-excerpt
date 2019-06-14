@@ -1539,6 +1539,14 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (avs == NULL)
             continue;
 
+        AVStream *ovs = NULL;
+        if (out_stream == video_stream)
+            ovs = out_video_stream;
+        if (out_stream == audio_stream)
+            ovs = out_audio_stream;
+        if (ovs == NULL)
+            continue;
+
         double pt = -1;
         int64_t pts = AV_NOPTS_VALUE;
         if (pts == AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE)
@@ -1566,7 +1574,16 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
 
         AVPacket* outpkt = av_packet_clone(pkt);
         if (outpkt != NULL) {
-            // TODO
+            outpkt->pts = av_rescale_q_rnd(pkt->pts, avs->time_base, ovs->time_base, AVRounding(AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
+            outpkt->dts = av_rescale_q_rnd(pkt->dts, avs->time_base, ovs->time_base, AVRounding(AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
+            outpkt->duration = av_rescale_q(pkt->duration, avs->time_base, ovs->time_base);
+            outpkt->stream_index = out_stream;
+            outpkt->pos = -1;
+
+            ret = av_interleaved_write_frame(ofmt_ctx, outpkt);
+            if (ret < 0)
+                fprintf(stderr,"Error writing packet\n");
+
             av_packet_free(&outpkt);
         }
 
