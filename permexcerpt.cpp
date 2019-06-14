@@ -1466,6 +1466,9 @@ void do_export_ui(void) {
         return;
     }
     fprintf(stderr,"User entered = '%s'\n",unamestr.c_str());
+
+    std::string final_name = unamestr + ext;
+    fprintf(stderr,"Final name = '%s'\n",final_name.c_str());
 }
 
 struct QueueEntry {
