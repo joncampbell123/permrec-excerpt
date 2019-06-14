@@ -799,9 +799,8 @@ public:
         if (!is_open())
             return 0;
 
-        if (avfmt != NULL) {
+        if (avfmt != NULL && avfmt->duration != AV_NOPTS_VALUE)
             d = double(avfmt->duration) / AV_TIME_BASE;
-        }
 
         return d;
     }
