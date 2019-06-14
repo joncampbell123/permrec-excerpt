@@ -1274,6 +1274,8 @@ bool do_prompt(std::string &str,const std::string &title) {
         Play_Idle();
 
         if (SDL_PollEvent(&event)) {
+            char insert_char = 0;
+
             if (event.type == SDL_QUIT) {
                 quitting_app = true;
                 running = false;
@@ -1302,6 +1304,7 @@ bool do_prompt(std::string &str,const std::string &title) {
                         cursor_pos--;
                         std::string first = str.substr(0,cursor_pos);
                         str = first + last;
+                        gui_redraw = true;
                     }
                 }
                 else if (event.key.keysym.sym == SDLK_DELETE) {
@@ -1309,22 +1312,49 @@ bool do_prompt(std::string &str,const std::string &title) {
                         std::string last = str.substr(cursor_pos+1);
                         std::string first = str.substr(0,cursor_pos);
                         str = first + last;
+                        gui_redraw = true;
                     }
                 }
                 else if (event.key.keysym.sym == SDLK_HOME) {
                     cursor_pos = 0;
+                    gui_redraw = true;
                 }
                 else if (event.key.keysym.sym == SDLK_END) {
                     cursor_pos = str.length();
+                    gui_redraw = true;
                 }
                 else if (event.key.keysym.sym == SDLK_LEFT) {
+                    gui_redraw = true;
                     if (cursor_pos)
                         cursor_pos--;
                 }
                 else if (event.key.keysym.sym == SDLK_RIGHT) {
+                    gui_redraw = true;
                     if (cursor_pos < str.length())
                         cursor_pos++;
                 }
+                else if (event.key.keysym.sym == SDLK_SPACE) {
+                    insert_char = ' ';
+                }
+                else if (event.key.keysym.sym >= SDLK_a && event.key.keysym.sym <= SDLK_z) {
+                    if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
+                        insert_char = 'A' + (event.key.keysym.sym - SDLK_a);
+                    else
+                        insert_char = 'a' + (event.key.keysym.sym - SDLK_a);
+                }
+                else if (event.key.keysym.sym >= SDLK_0 && event.key.keysym.sym <= SDLK_9) {
+                    insert_char = '0' + (event.key.keysym.sym - SDLK_0);
+                }
+            }
+
+            if (insert_char != 0) {
+                gui_redraw = true;
+                std::string last = str.substr(cursor_pos);
+                std::string first = str.substr(0,cursor_pos);
+                str  = first;
+                str += insert_char;
+                str += last;
+                cursor_pos++;
             }
         }
 
