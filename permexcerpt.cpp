@@ -1218,7 +1218,7 @@ void clear_current_av(void);
 void do_seek_rel(double dt) {
     play_in_time += dt;
     if (play_in_time < 0) play_in_time = 0;
-    if (play_in_time > play_duration) play_in_time = play_duration;
+    if (play_duration > 0 && play_in_time > play_duration) play_in_time = play_duration;
     play_in_base = play_in_time;
     playing_base = monotonic_clock_us();
 
