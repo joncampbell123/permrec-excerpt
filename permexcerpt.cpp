@@ -1950,6 +1950,7 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
     (void)pkt;
 
     {
+        double d;
         double pt;
         int64_t pts = AV_NOPTS_VALUE;
         if (pts == AV_NOPTS_VALUE && fr->pts != AV_NOPTS_VALUE)
@@ -1964,10 +1965,17 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
         else
             return false;
 
-        if (fr->pkt_duration != AV_NOPTS_VALUE)
+        if (fr->pkt_duration != AV_NOPTS_VALUE) {
             audio_last_next_pts = pts + fr->pkt_duration;
-        else
+            d = (double(fr->pkt_duration) * avs->time_base.num) / avs->time_base.den;
+        }
+        else {
             audio_last_next_pts = pts + int64_t(1);
+            d = 0.02;
+        }
+
+        if ((pt - 0.15 - d) < play_in_time)
+            return false;
 
         if (!schedule_audio_frame(pt,fr))
             return false;
