@@ -1496,6 +1496,8 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     /* .vob does not mean svcd you idiot */
     if (strstr(out_filename.c_str(),".vob") != NULL)
         fmtname = "vob";
+    if (strstr(out_filename.c_str(),".mpeg2") != NULL)
+        fmtname = "mpeg";
 
     avformat_alloc_output_context2(&ofmt_ctx, NULL, fmtname, out_filename.c_str());
     if (!ofmt_ctx) {
