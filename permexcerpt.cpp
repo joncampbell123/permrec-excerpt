@@ -1515,9 +1515,23 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         goto fail;
     }
 
-    // TODO
+    in_file.seek_to(in_point);
 
-    // TODO
+    do {
+        AVPacket *pkt = in_file.read_packet();
+        if (pkt == NULL) break;
+
+        int out_stream = -1;
+
+        if (pkt->stream_index == in_file_video_stream)
+            out_stream = video_stream;
+        if (pkt->stream_index == in_file_audio_stream)
+            out_stream = audio_stream;
+
+        if (out_stream < 0)
+            return;
+
+    } while(1);
 
 fail:
     if (ofmt_ctx != NULL) {
