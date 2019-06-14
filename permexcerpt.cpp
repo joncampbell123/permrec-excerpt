@@ -1616,6 +1616,11 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (pts == AV_NOPTS_VALUE)
             pts = last_next_pts[out_stream];
 
+        if (pkt->duration != AV_NOPTS_VALUE)
+            last_next_pts[out_stream] = pts + std::max(pkt->duration,int64_t(1));
+        else
+            last_next_pts[out_stream] = pts + int64_t(1);
+
         if (pts != AV_NOPTS_VALUE)
             pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
 
@@ -1662,8 +1667,6 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
 
             av_packet_free(&outpkt);
         }
-
-        last_next_pts[out_stream] = pts + pkt->duration;
     } while(1);
 
 fail:
