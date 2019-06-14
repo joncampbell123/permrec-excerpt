@@ -1289,6 +1289,10 @@ bool do_prompt(std::string &str,const std::string &title) {
                     answer = false;
                     break;
                 }
+                else if (event.key.keysym.sym == SDLK_RETURN) {
+                    answer = true;
+                    break;
+                }
             }
         }
 
