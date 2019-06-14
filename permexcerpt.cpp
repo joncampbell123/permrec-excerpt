@@ -1971,10 +1971,10 @@ bool queue_audio_frame(AVFrame *fr,AVPacket *pkt,AVStream *avs) {
         }
         else {
             audio_last_next_pts = pts + int64_t(1);
-            d = 0.02;
+            d = 0.1;
         }
 
-        if ((pt - 0.15 - d) < play_in_time)
+        if ((pt + 0.1 + d) < play_in_time)
             return false;
 
         if (!schedule_audio_frame(pt,fr))
