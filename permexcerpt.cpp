@@ -1429,6 +1429,7 @@ bool do_prompt(std::string &str,const std::string &title) {
 }
 
 void do_export(const std::string &out_filename,double in_point,double out_point) {
+    int64_t last_next_pts[2] = {0,0};
     AVStream *out_video_stream = NULL;
     AVStream *out_audio_stream = NULL;
     AVFormatContext *ofmt_ctx = NULL;
@@ -1529,8 +1530,29 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
             out_stream = audio_stream;
 
         if (out_stream < 0)
-            return;
+            continue;
 
+        assert(out_stream < 2);
+
+        AVStream *avs = fp.avfmt_stream(size_t(pkt->stream_index));
+        if (avs == NULL)
+            continue;
+
+        double pt = -1;
+        int64_t pts = AV_NOPTS_VALUE;
+        if (pts == AV_NOPTS_VALUE && pkt->pts != AV_NOPTS_VALUE)
+            pts = pkt->pts;
+        if (pts == AV_NOPTS_VALUE && pkt->dts != AV_NOPTS_VALUE)
+            pts = pkt->dts;
+        if (pts == AV_NOPTS_VALUE)
+            pts = last_next_pts[out_stream];
+
+        if (pts != AV_NOPTS_VALUE)
+            pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
+
+        fprintf(stderr,"%.3f\n",pt);
+
+        last_next_pts[out_stream] = pts + pkt->duration;
     } while(1);
 
 fail:
