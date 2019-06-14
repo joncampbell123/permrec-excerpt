@@ -1490,7 +1490,7 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     double lat_pt = 0;
     int ret;
 
-    if (in_file_video_stream < 0 || in_file_audio_stream < 0)
+    if (in_file_video_stream < 0 && in_file_audio_stream < 0)
         return;
 
     progress_last_update = 0;
