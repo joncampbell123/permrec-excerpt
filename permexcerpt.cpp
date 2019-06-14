@@ -1264,6 +1264,9 @@ void do_progress_bar(double t,double total) {
     SDL_Rect box,progress;
     us_time_t now = monotonic_clock_us();
 
+    if (mainSurface->w < 256 || mainSurface->h < 128)
+        return;
+
     if (now >= (progress_last_update + us_time_t(50000))) { /* 50ms */
         progress_last_update = now;
         gui_redraw = true;
@@ -1283,10 +1286,10 @@ void do_progress_bar(double t,double total) {
             if (p < 0) p = 0;
             if (p > 1) p = 1;
             progress = box;
-            progress.w  = static_cast<int>(p * (box.w - 2));
-            progress.h -= 2;
-            progress.y += 1;
-            progress.x += 1;
+            progress.w  = static_cast<int>(p * (box.w - (2 + 2)));
+            progress.h -= (2 + 2);
+            progress.y += 2;
+            progress.x += 2;
         }
 
         SDL_FillRect(mainSurface, &box,         SDL_MapRGB(mainSurface->format, 15, 15, 15));
