@@ -1574,6 +1574,15 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
 
         AVPacket* outpkt = av_packet_clone(pkt);
         if (outpkt != NULL) {
+            int64_t adj;
+
+            adj = int64_t((in_point * avs->time_base.den) / avs->time_base.num);
+
+            if (pkt->pts != AV_NOPTS_VALUE)
+                pkt->pts -= adj;
+            if (pkt->dts != AV_NOPTS_VALUE)
+                pkt->dts -= adj;
+
             outpkt->pts = av_rescale_q_rnd(pkt->pts, avs->time_base, ovs->time_base, AVRounding(AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
             outpkt->dts = av_rescale_q_rnd(pkt->dts, avs->time_base, ovs->time_base, AVRounding(AV_ROUND_NEAR_INF|AV_ROUND_PASS_MINMAX));
             outpkt->duration = av_rescale_q(pkt->duration, avs->time_base, ovs->time_base);
