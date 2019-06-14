@@ -1299,12 +1299,18 @@ bool do_prompt(std::string &str,const std::string &title) {
                     if (cursor_pos > str.length())
                         cursor_pos = str.length();
 
-                    if (cursor_pos > 0) {
-                        std::string last = str.substr(cursor_pos);
-                        cursor_pos--;
-                        std::string first = str.substr(0,cursor_pos);
-                        str = first + last;
-                        gui_redraw = true;
+                    if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT)) {
+                        cursor_pos = 0;
+                        str.clear();
+                    }
+                    else {
+                        if (cursor_pos > 0) {
+                            std::string last = str.substr(cursor_pos);
+                            cursor_pos--;
+                            std::string first = str.substr(0,cursor_pos);
+                            str = first + last;
+                            gui_redraw = true;
+                        }
                     }
                 }
                 else if (event.key.keysym.sym == SDLK_DELETE) {
