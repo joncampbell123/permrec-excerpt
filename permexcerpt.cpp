@@ -1255,9 +1255,96 @@ void do_stop(void) {
     }
 }
 
+void Play_Idle(void);
+void vga_print_font(int x,int y,const char *str);
+
 bool do_prompt(std::string &str,const std::string &title) {
-    // TODO
-    return false;
+    int title_x = 0,title_y = 0;
+    int text_x = 0,text_y = 0;
+    int cursor_pos = str.length();
+    SDL_Rect cursor_box;
+    SDL_Rect prompt_box;
+    SDL_Rect title_box;
+    SDL_Event event;
+    bool running = true;
+    bool answer = false;
+    bool sizeme = true;
+
+    while (running) {
+        Play_Idle();
+
+        if (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                quitting_app = true;
+                running = false;
+            }
+            else if (event.type == SDL_WINDOWEVENT) {
+                GUI_OnWindowEvent(event.window);
+
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+                    sizeme = true;
+            }
+            else if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_ESCAPE) {
+                    answer = false;
+                    break;
+                }
+            }
+        }
+
+        if (sizeme) {
+            if (mainSurface->w < 400 || mainSurface->h < 128) {
+                answer = false;
+                break;
+            }
+
+            prompt_box.x = 8;
+            prompt_box.w = std::max(mainSurface->w - 8 - prompt_box.x,0);
+            prompt_box.y = 8;
+            prompt_box.h = (1 + 14 + 1) + (1 + 14 + 1);
+
+            title_box.x = prompt_box.x + 1;
+            title_box.w = prompt_box.w - 1 - 1;
+            title_box.y = prompt_box.y + 1;
+            title_box.h = 14;
+
+            title_x = ((title_box.w - (title.length() * 8)) / 2) + title_box.x;
+            title_y = title_box.y;
+
+            text_x = prompt_box.x + 1;
+            text_y = title_box.y + (1 + 14 + 1);
+
+            gui_redraw = true;
+            sizeme = false;
+        }
+
+        if (gui_redraw) {
+            SDL_LockSurface(mainSurface);
+            gui_redraw_do_locked();
+
+            cursor_box.x = text_x + (cursor_pos * 8);
+            cursor_box.y = text_y;
+            cursor_box.w = 4;
+            cursor_box.h = 14;
+
+            SDL_FillRect(mainSurface, &prompt_box,  SDL_MapRGB(mainSurface->format,15,15,15));
+            SDL_FillRect(mainSurface, &title_box,   SDL_MapRGB(mainSurface->format,31,31,31));
+            vga_print_font(title_x,title_y,title.c_str());
+            vga_print_font(text_x,text_y,str.c_str());
+            SDL_FillRect(mainSurface, &cursor_box,  SDL_MapRGB(mainSurface->format,31,63,63));
+
+            SDL_UnlockSurface(mainSurface);
+            SDL_UpdateWindowSurface(mainWindow);
+            gui_redraw = false;
+
+            gui_redraw_at_play_time = play_in_time + 0.1;
+        }
+
+        SDL_Delay(is_playing() ? 1 : (1000/100));
+    }
+
+    gui_redraw = true;
+    return answer;
 }
 
 void do_export_ui(void) {
@@ -1283,7 +1370,12 @@ void do_export_ui(void) {
     fprintf(stderr,"ext = '%s'\n",ext.c_str());
 
     /* prompt for file name */
-    std::string unamestr;
+    std::string unamestr = "untitled-";
+    {
+        char tmp[256];
+        sprintf(tmp,"%.2f-%.2f",in_point,out_point);
+        unamestr += tmp;
+    }
     if (!do_prompt(/*&*/unamestr,"Clip name?")) {
         fprintf(stderr,"User cancelled prompt\n");
         return;
