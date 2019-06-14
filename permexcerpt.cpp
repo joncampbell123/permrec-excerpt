@@ -2495,6 +2495,7 @@ void process_audio_queue(void) {
 void Play_Idle(void) {
     unsigned int ft;
     AVFrame *fr = NULL;
+    size_t audio_queue_max = 256;
     auto &fp = current_file();
 
     if (is_playing() && !fp.is_open())
@@ -2553,8 +2554,6 @@ void Play_Idle(void) {
             }
         }
 
-        size_t audio_queue_max = 256;
-
         times = 16;
         while (times-- > 0) {
             if (audio_queue.size() < audio_queue_max && !audio_queue_pkt.empty()) {
@@ -2568,20 +2567,9 @@ void Play_Idle(void) {
                     do {
                         fr = in_file.decode_frame(pkt,/*&*/ft);
                         if (fr != NULL) {
-                            // HACK: Some MOV files in my test collection cause FFMPEG to decode and render
-                            //       audio packets representing extremely tiny segments of audio (1ms??)
-                            //       Specifically, MOV files with QT IMA-ADPCM audio with 64 samples/block.
-                            if (fr->pkt_duration != AV_NOPTS_VALUE) {
-                                AVStream *avs = fp.avfmt_stream(size_t(pkt->stream_index));
-                                if (avs != NULL) {
-                                    double t = (double(fr->pkt_duration) * avs->time_base.num) / avs->time_base.den;
-                                    if (t < 0.03) {
-                                        if (audio_queue_max < 4096)
-                                            audio_queue_max++;
-
-                                        times++;
-                                    }
-                                }
+                            if ((audio_queue.size()+4) >= audio_queue_max) {
+                                get_play_time_now();
+                                process_audio_queue();
                             }
 
                             if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
