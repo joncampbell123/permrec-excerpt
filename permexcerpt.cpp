@@ -1486,6 +1486,7 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     bool was_playing = false;
     int audio_stream = -1;
     int video_stream = -1;
+    double lat_pt = 0;
     int ret;
 
     if (in_file_video_stream < 0 || in_file_audio_stream < 0)
@@ -1623,8 +1624,10 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (pt < in_point)
             continue;
 
-        if (pts != AV_NOPTS_VALUE)
-            do_progress_bar(pt - in_point,out_point - in_point);
+        if (pts != AV_NOPTS_VALUE) {
+            lat_pt = std::max(lat_pt,pt - in_point);
+            do_progress_bar(lat_pt,out_point - in_point);
+        }
 
         if (keyframe[out_stream] == false) {
             if (!(pkt->flags & AV_PKT_FLAG_KEY))
