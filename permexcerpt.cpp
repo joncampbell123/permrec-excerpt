@@ -1428,6 +1428,37 @@ bool do_prompt(std::string &str,const std::string &title) {
     return answer;
 }
 
+void do_export(const std::string &out_filename,double in_point,double out_point) {
+    AVFormatContext *ofmt_ctx = NULL;
+    AVDictionary *mp4_dict = NULL;
+    AVOutputFormat *ofmt = NULL;
+    const char *fmtname = NULL;
+
+    avformat_alloc_output_context2(&ofmt_ctx, NULL, fmtname, out_filename.c_str());
+    if (!ofmt_ctx) {
+        fprintf(stderr,"Failed to open output context\n");
+        return;
+    }
+    ofmt = ofmt_ctx->oformat;
+    assert(ofmt != NULL);
+
+    // TODO
+
+    // TODO
+
+    if (ofmt_ctx != NULL) {
+        if (!(ofmt->flags & AVFMT_NOFILE)) {
+            fprintf(stderr,"Closing pb\n");
+            avio_closep(&ofmt_ctx->pb);
+        }
+        fprintf(stderr,"Freeing context\n");
+        avformat_free_context(ofmt_ctx);
+        fprintf(stderr,"Done\n");
+        ofmt_ctx = NULL;
+        ofmt = NULL;
+    }
+}
+
 void do_export_ui(void) {
     auto &fp = current_file();
     auto &name = fp.get_path();
@@ -1475,6 +1506,8 @@ void do_export_ui(void) {
 
     std::string final_name = unamestr + ext;
     fprintf(stderr,"Final name = '%s'\n",final_name.c_str());
+
+    do_export(final_name,in_point,out_point);
 }
 
 struct QueueEntry {
