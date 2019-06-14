@@ -1474,6 +1474,7 @@ bool do_prompt(std::string &str,const std::string &title) {
 }
 
 void do_export(const std::string &out_filename,double in_point,double out_point) {
+    SDL_Event event;
     bool keyframe[2] = {false,false};
     int64_t last_next_pts[2] = {-1,-1};
     AVStream *out_video_stream = NULL;
@@ -1580,6 +1581,23 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     fp.seek_to(in_point);
 
     do {
+        if (SDL_PollEvent(&event)) {
+            if (event.type == SDL_QUIT) {
+                quitting_app = true;
+            }
+            else if (event.type == SDL_WINDOWEVENT) {
+                GUI_OnWindowEvent(event.window);
+
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+                    gui_redraw = true;
+            }
+            else if (event.type == SDL_KEYDOWN) {
+                if (event.key.keysym.sym == SDLK_ESCAPE) {
+                    break;
+                }
+            }
+        }
+
         AVPacket *pkt = fp.read_packet();
         if (pkt == NULL) break;
 
