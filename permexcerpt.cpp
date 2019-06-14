@@ -2539,9 +2539,11 @@ void Play_Idle(void) {
             }
         }
 
+        size_t audio_queue_max = 256;
+
         times = 16;
         while (times-- > 0) {
-            if (audio_queue.size() < 256 && !audio_queue_pkt.empty()) {
+            if (audio_queue.size() < audio_queue_max && !audio_queue_pkt.empty()) {
                 QueueEntry ent = std::move(audio_queue_pkt.front());
                 audio_queue_pkt.pop();
                 AVPacket *pkt = ent.packet;
@@ -2552,6 +2554,19 @@ void Play_Idle(void) {
                     do {
                         fr = in_file.decode_frame(pkt,/*&*/ft);
                         if (fr != NULL) {
+                            // HACK: Some MOV files in my test collection cause FFMPEG to decode and render
+                            //       audio packets representing extremely tiny segments of audio (1ms??)
+                            if (fr->pkt_duration != AV_NOPTS_VALUE) {
+                                AVStream *avs = fp.avfmt_stream(size_t(pkt->stream_index));
+                                if (avs != NULL) {
+                                    double t = (double(fr->pkt_duration) * avs->time_base.num) / avs->time_base.den;
+                                    if (t < 0.03) {
+                                        audio_queue_max++;
+                                        times++;
+                                    }
+                                }
+                            }
+
                             if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
                                 av_frame_free(&fr);
                             }
