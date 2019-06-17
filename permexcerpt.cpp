@@ -545,6 +545,9 @@ void do_gui_check_redraw(void) {
     }
 }
 
+void recompute_start_adj(void);
+void do_video_adj(double adj);
+
 void MouseDragThumb(int x,int y) {
     (void)y;
 
@@ -653,6 +656,12 @@ bool GUI_Idle(void) {
                     do_seek_rel(60);
                 else
                     do_seek_rel(5);
+            }
+            else if (event.key.keysym.sym == SDLK_COMMA) {
+                do_video_adj(-0.1);
+            }
+            else if (event.key.keysym.sym == SDLK_PERIOD) {
+                do_video_adj(0.1);
             }
         }
     }
@@ -1163,6 +1172,14 @@ protected:
 InputFile                   in_file;
 int                         in_file_video_stream = -1;
 int                         in_file_audio_stream = -1;
+double                      video_adj = 0;
+
+void do_video_adj(double adj) {
+    video_adj += adj;
+    if (fabs(video_adj) < 0.05) video_adj = 0;
+    recompute_start_adj();
+    do_seek_rel(0);
+}
 
 void mark_in(void) {
     in_point = play_in_time;
@@ -1225,7 +1242,7 @@ void do_seek_rel(double dt) {
     auto &fp = current_file();
     fp.reset_codec(size_t(in_file_audio_stream));
     fp.reset_codec(size_t(in_file_video_stream));
-    fp.seek_to(play_in_time);
+    fp.seek_to(play_in_time - std::max(video_adj,0.0));
     sdl_audio_queue_flush();
     clear_current_av();
     flush_queue();
@@ -1577,7 +1594,7 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     was_playing = is_playing();
     do_stop();
 
-    fp.seek_to(in_point);
+    fp.seek_to(in_point - std::max(video_adj,0.0));
 
     do {
         if (SDL_PollEvent(&event)) {
@@ -2416,18 +2433,20 @@ void recompute_start_adj(void) {
     if (fabs(vs-as) < 1.0) {
         fas = std::min(vs,as);
         fp.set_adj(fas);
+        if (video_adj != 0 && in_file_video_stream >= 0)
+            fp.set_stream_adj(fas - video_adj,size_t(in_file_video_stream));
     }
     else {
         fprintf(stderr,"audio/video start are too far apart\n");
         fas = std::min(vs,as);
         fp.set_adj(fas);
         if (in_file_video_stream >= 0)
-            fp.set_stream_adj(vs,size_t(in_file_video_stream));
+            fp.set_stream_adj(vs - video_adj,size_t(in_file_video_stream));
         if (in_file_audio_stream >= 0)
             fp.set_stream_adj(as,size_t(in_file_audio_stream));
     }
 
-    fprintf(stderr,"Start compute: as=%.3f vs=%.3f min=%.3f\n",as,vs,fas);
+    fprintf(stderr,"Start compute: as=%.3f vs=%.3f min=%.3f vadj=%.3f\n",as,vs,fas,video_adj);
 }
 
 void next_video_stream(void) {
