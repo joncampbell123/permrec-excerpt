@@ -813,9 +813,24 @@ public:
 
         return d;
     }
+    int64_t float2timestamp(AVStream *s,double t) {
+        // assume s != NULL
+        return int64_t((t * s->time_base.den) / s->time_base.num);
+    }
+    int64_t float2timestamp(const size_t i,double t) {
+        if (i < avfmt_stream_count()) {
+            AVStream *s = avfmt_stream(i);
+            if (s != NULL) return float2timestamp(s,t);
+        }
+
+        return AV_NOPTS_VALUE;
+    }
     double timestamp2float(AVStream *s,const int64_t t) {
         // assume s != NULL
-        return (double(t) * s->time_base.num) / s->time_base.den;
+        if (t != AV_NOPTS_VALUE)
+            return (double(t) * s->time_base.num) / s->time_base.den;
+
+        return 0;
     }
     double timestamp2float(const size_t i,const int64_t t) {
         if (i < avfmt_stream_count()) {
