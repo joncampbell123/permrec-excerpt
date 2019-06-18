@@ -2460,6 +2460,8 @@ void next_stream_of_type(const int type,int &in_file_stream) {
 void recompute_start_adj(void) {
     auto &fp = current_file();
     bool need_check = false;
+    bool pkt_check = false;
+    bool seek_after = false;
     double vs = 0,as = 0;
 
     if (in_file_video_stream >= 0)
@@ -2475,6 +2477,46 @@ void recompute_start_adj(void) {
         // "mpegts" can have multiple streams with different time bases
         if (fn == "mpegts")
             need_check = true;
+        // "mpegts" can have bogus start_time values in some cases
+        if (fn == "mpegts")
+            pkt_check = true;
+    }
+
+    if (pkt_check && fabs(vs-as) >= 1.0) {
+        bool fvid=false,faud=false;
+
+        fp.set_adj(0); // disable adjust for a bit
+        fp.seek_to(0); // go to start
+
+        if (in_file_video_stream < 0)
+            fvid = true;
+        if (in_file_audio_stream < 0)
+            faud = true;
+
+        fprintf(stderr,"Do not trust start_time, scanning start of stream\n");
+        do {
+            AVPacket *pkt = fp.read_packet();
+            if (pkt == NULL) break;
+
+            if (pkt->stream_index == in_file_video_stream) {
+                if (!fvid) {
+                    vs = fp.timestamp2float(size_t(pkt->stream_index),pkt->dts);
+                    fprintf(stderr,"First video: %.3f\n",vs);
+                    fvid = true;
+                }
+            }
+            else if (pkt->stream_index == in_file_audio_stream) {
+                if (!faud) {
+                    as = fp.timestamp2float(size_t(pkt->stream_index),pkt->dts);
+                    fprintf(stderr,"First audio: %.3f\n",as);
+                    faud = true;
+                }
+            }
+
+            av_packet_unref(pkt);
+        } while (!fvid || !faud);
+
+        seek_after = true;
     }
 
     if (fabs(vs-as) < 1.0 || !need_check) {
@@ -2494,6 +2536,9 @@ void recompute_start_adj(void) {
     }
 
     fprintf(stderr,"Start compute: as=%.3f vs=%.3f min=%.3f vadj=%.3f\n",as,vs,fas,video_adj);
+
+    if (seek_after)
+        do_seek_rel(0);
 }
 
 void next_video_stream(void) {
