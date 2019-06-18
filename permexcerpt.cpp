@@ -813,11 +813,23 @@ public:
 
         return d;
     }
+    double timestamp2float(AVStream *s,const int64_t t) {
+        // assume s != NULL
+        return (double(t) * s->time_base.num) / s->time_base.den;
+    }
+    double timestamp2float(const size_t i,const int64_t t) {
+        if (i < avfmt_stream_count()) {
+            AVStream *s = avfmt_stream(i);
+            if (s != NULL) return timestamp2float(s,t);
+        }
+
+        return 0;
+    }
     double stream_start_time(const size_t i) {
         if (i < avfmt_stream_count()) {
             AVStream *s = avfmt_stream(i);
             if (s != NULL && s->start_time != AV_NOPTS_VALUE)
-                return (double(s->start_time) * s->time_base.num) / s->time_base.den;
+                return timestamp2float(s,s->start_time);
         }
 
         return 0;
