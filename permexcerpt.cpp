@@ -802,6 +802,14 @@ public:
         close();
     }
 public:
+    std::string format_name(void) {
+        if (avfmt != NULL) {
+            if (avfmt->iformat != NULL)
+                return avfmt->iformat->name;
+        }
+
+        return std::string();
+    }
     double get_duration(void) {
         double d = 0;
 
@@ -906,6 +914,9 @@ public:
     }
     void print_fmt_debug(void) {
         if (avfmt != NULL) {
+            fprintf(stderr,"Format: '%s' (%s)\n",
+                avfmt->iformat->name,
+                avfmt->iformat->long_name);
             fprintf(stderr,"Format: %d streams, start_time=%lld/%lld duration=%lld/%lld bitrate=%lld packet_size=%u\n",
                 static_cast<int>(avfmt->nb_streams),
                 static_cast<signed long long>(avfmt->start_time),
@@ -2448,6 +2459,7 @@ void next_stream_of_type(const int type,int &in_file_stream) {
 
 void recompute_start_adj(void) {
     auto &fp = current_file();
+    bool need_check = false;
     double vs = 0,as = 0;
 
     if (in_file_video_stream >= 0)
@@ -2457,7 +2469,15 @@ void recompute_start_adj(void) {
 
     double fas;
 
-    if (fabs(vs-as) < 1.0) {
+    {
+        std::string fn = fp.format_name();
+
+        // "mpegts" can have multiple streams with different time bases
+        if (fn == "mpegts")
+            need_check = true;
+    }
+
+    if (fabs(vs-as) < 1.0 || !need_check) {
         fas = std::min(vs,as);
         fp.set_adj(fas);
         if (video_adj != 0 && in_file_video_stream >= 0)
