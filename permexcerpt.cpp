@@ -1196,7 +1196,7 @@ protected:
     bool                    eof = false;
 };
 
-InputFile                   in_file;
+InputFile*                  in_file = NULL;
 int                         in_file_video_stream = -1;
 int                         in_file_audio_stream = -1;
 double                      video_adj = 0;
@@ -1238,7 +1238,7 @@ void clear_out_point(void) {
 }
 
 InputFile &current_file(void) {
-    return in_file;
+    return *in_file;
 }
 
 double get_play_time_now(void) {
@@ -2556,7 +2556,7 @@ void Play_Idle(void) {
             if (video_queue_pkt.size() >= 512 || audio_queue_pkt.size() >= 2048)
                 break;
 
-            AVPacket *pkt = in_file.read_packet();
+            AVPacket *pkt = fp.read_packet();
             if (pkt == NULL) break;
 
             if (pkt->stream_index == in_file_video_stream) {
@@ -2583,9 +2583,9 @@ void Play_Idle(void) {
                 active = true;
                 if (pkt != NULL && pkt->stream_index == in_file_video_stream) {
                     do {
-                        fr = in_file.decode_frame(pkt,/*&*/ft);
+                        fr = fp.decode_frame(pkt,/*&*/ft);
                         if (fr != NULL) {
-                            if (!queue_video_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                            if (!queue_video_frame(fr,pkt,fp.avfmt_stream(size_t(pkt->stream_index)))) {
                                 av_frame_free(&fr);
                             }
                         }
@@ -2611,14 +2611,14 @@ void Play_Idle(void) {
                     // in some cases (old ASF files) the AVPacket contains multiple audio frames,
                     // and the decoder will only decode ONE.
                     do {
-                        fr = in_file.decode_frame(pkt,/*&*/ft);
+                        fr = fp.decode_frame(pkt,/*&*/ft);
                         if (fr != NULL) {
                             if ((audio_queue.size()+4) >= audio_queue_max) {
                                 get_play_time_now();
                                 process_audio_queue();
                             }
 
-                            if (!queue_audio_frame(fr,pkt,in_file.avfmt_stream(size_t(pkt->stream_index)))) {
+                            if (!queue_audio_frame(fr,pkt,fp.avfmt_stream(size_t(pkt->stream_index)))) {
                                 av_frame_free(&fr);
                             }
                         }
@@ -2634,7 +2634,7 @@ void Play_Idle(void) {
         }
 
         if (!active) {
-            if (in_file.is_eof()) {
+            if (fp.is_eof()) {
                 if (video_queue.empty() && audio_queue.empty() && video_queue_pkt.empty() && audio_queue_pkt.empty())
                     do_stop();
             }
@@ -2675,6 +2675,8 @@ int main(int argc,char **argv) {
             fprintf(stderr,"%s is not a file\n",open_file.c_str());
             return 1;
         }
+
+        in_file = new InputFile();
     }
 
 	av_register_all();
@@ -2685,14 +2687,14 @@ int main(int argc,char **argv) {
     Windows_DPI_Awareness_Init();
 #endif
 
-    if (!in_file.open(open_file)) {
+    if (!in_file->open(open_file)) {
         fprintf(stderr,"Failed to open file %s\n",open_file.c_str());
         return 1;
     }
 
-    play_duration = in_file.get_duration();
-    in_file_audio_stream = in_file.find_default_stream_audio();
-    in_file_video_stream = in_file.find_default_stream_video();
+    play_duration = in_file->get_duration();
+    in_file_audio_stream = in_file->find_default_stream_audio();
+    in_file_video_stream = in_file->find_default_stream_video();
     fprintf(stderr,"Duration: %.3f\n",play_duration);
     fprintf(stderr,"Chose audio stream %d, video stream %d\n",in_file_audio_stream,in_file_video_stream);
 
@@ -2754,6 +2756,9 @@ int main(int argc,char **argv) {
     flush_queue();
     free_audio_resampler();
     free_video_scaler();
+
+    if (in_file != NULL) delete in_file;
+    in_file = NULL;
 
     SDL_DestroyWindow(mainWindow);
     SDL_CloseAudio();
