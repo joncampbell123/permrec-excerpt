@@ -779,6 +779,15 @@ public:
         ~Stream() {
             close();
         }
+        Stream(const Stream &s) = delete;
+        Stream(Stream &&s) {
+            codec_open =            s.codec_open;
+                                    s.codec_open = false;
+            frame =                 s.frame;
+                                    s.frame = NULL;
+            ts_adj =                s.ts_adj;
+                                    s.ts_adj = 0;
+        }
         void close(void) {
             av_frame_free(&frame);
         }
@@ -1073,6 +1082,12 @@ public:
         if (avfmt != NULL && !eof) {
             avpkt_reset();
             if (av_read_frame(avfmt,&avpkt) >= 0) {
+                // NTS: mpegts can add new streams if they appear
+                if (streams.size() != size_t(avfmt->nb_streams)) {
+                    fprintf(stderr,"FFMPEG changed stream count!\n");
+                    streams.resize(avfmt_stream_count());
+                }
+
                 if (size_t(avpkt.stream_index) < size_t(avfmt->nb_streams)) {
                     Stream &s = stream(size_t(avpkt.stream_index));
                     if (avpkt.pts != AV_NOPTS_VALUE)
