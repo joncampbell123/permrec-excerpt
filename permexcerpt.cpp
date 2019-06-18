@@ -1197,6 +1197,7 @@ protected:
 };
 
 InputFile*                  in_file = NULL;
+InputFile*                  in2_file = NULL;
 int                         in_file_video_stream = -1;
 int                         in_file_audio_stream = -1;
 double                      video_adj = 0;
@@ -2653,17 +2654,19 @@ void Play_Idle(void) {
 
 int main(int argc,char **argv) {
     std::string open_file;
+    std::string open2_file;
 
     (void)argc;
     (void)argv;
 
     /* FIXME: This is simple, dumb. Will do more later. */
     if (argc < 2) {
-        fprintf(stderr,"Must specify file\n");
+        fprintf(stderr,"%s <file>\n",argv[0]);
+        fprintf(stderr,"%s <file> <file>\n",argv[0]);
         return 1;
     }
-    open_file = argv[1];
 
+    open_file = argv[1];
     {
         struct stat st;
 
@@ -2679,6 +2682,24 @@ int main(int argc,char **argv) {
         in_file = new InputFile();
     }
 
+    if (argc > 2) {
+        open2_file = argv[2];
+        {
+            struct stat st;
+
+            if (::stat(open2_file.c_str(),&st)) {
+                fprintf(stderr,"Cannot stat file, %s\n",strerror(errno));
+                return 1;
+            }
+            if (!S_ISREG(st.st_mode)) {
+                fprintf(stderr,"%s is not a file\n",open2_file.c_str());
+                return 1;
+            }
+
+            in2_file = new InputFile();
+        }
+    }
+
 	av_register_all();
 	avformat_network_init();
 	avcodec_register_all();
@@ -2690,6 +2711,12 @@ int main(int argc,char **argv) {
     if (!in_file->open(open_file)) {
         fprintf(stderr,"Failed to open file %s\n",open_file.c_str());
         return 1;
+    }
+    if (in2_file != NULL) {
+        if (!in2_file->open(open2_file)) {
+            fprintf(stderr,"Failed to open file %s\n",open2_file.c_str());
+            return 1;
+        }
     }
 
     play_duration = in_file->get_duration();
@@ -2756,6 +2783,9 @@ int main(int argc,char **argv) {
     flush_queue();
     free_audio_resampler();
     free_video_scaler();
+
+    if (in2_file != NULL) delete in2_file;
+    in2_file = NULL;
 
     if (in_file != NULL) delete in_file;
     in_file = NULL;
