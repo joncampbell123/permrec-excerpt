@@ -798,11 +798,11 @@ public:
 public:
     InputFile() {
     }
-    ~InputFile() {
+    virtual ~InputFile() {
         close();
     }
 public:
-    double get_duration(void) {
+    virtual double get_duration(void) {
         double d = 0;
 
         if (!is_open())
@@ -813,11 +813,11 @@ public:
 
         return d;
     }
-    int64_t float2timestamp(AVStream *s,double t) {
+    virtual int64_t float2timestamp(AVStream *s,double t) {
         // assume s != NULL
         return int64_t((t * s->time_base.den) / s->time_base.num);
     }
-    int64_t float2timestamp(const size_t i,double t) {
+    virtual int64_t float2timestamp(const size_t i,double t) {
         if (i < avfmt_stream_count()) {
             AVStream *s = avfmt_stream(i);
             if (s != NULL) return float2timestamp(s,t);
@@ -825,14 +825,14 @@ public:
 
         return AV_NOPTS_VALUE;
     }
-    double timestamp2float(AVStream *s,const int64_t t) {
+    virtual double timestamp2float(AVStream *s,const int64_t t) {
         // assume s != NULL
         if (t != AV_NOPTS_VALUE)
             return (double(t) * s->time_base.num) / s->time_base.den;
 
         return 0;
     }
-    double timestamp2float(const size_t i,const int64_t t) {
+    virtual double timestamp2float(const size_t i,const int64_t t) {
         if (i < avfmt_stream_count()) {
             AVStream *s = avfmt_stream(i);
             if (s != NULL) return timestamp2float(s,t);
@@ -840,7 +840,7 @@ public:
 
         return 0;
     }
-    double stream_start_time(const size_t i) {
+    virtual double stream_start_time(const size_t i) {
         if (i < avfmt_stream_count()) {
             AVStream *s = avfmt_stream(i);
             if (s != NULL && s->start_time != AV_NOPTS_VALUE)
@@ -849,21 +849,21 @@ public:
 
         return 0;
     }
-    void set_adj(double min_t) {
+    virtual void set_adj(double min_t) {
         for (size_t i=0;i < avfmt_stream_count();i++) {
             AVStream *s = avfmt_stream(i);
             Stream &si = stream(i);
             si.ts_adj = -int64_t((min_t * s->time_base.den) / s->time_base.num);
         }
     }
-    void set_stream_adj(double min_t,const size_t i) {
+    virtual void set_stream_adj(double min_t,const size_t i) {
         AVStream *s = avfmt_stream(i);
         if (s != NULL) {
             Stream &si = stream(i);
             si.ts_adj = -int64_t((min_t * s->time_base.den) / s->time_base.num);
         }
     }
-    bool open(const std::string &path) {
+    virtual bool open(const std::string &path) {
         if (is_open())
             close();
         if (path.empty())
@@ -892,19 +892,19 @@ public:
         open_flag = true;
         return true;
     }
-    const std::string &get_path(void) const {
+    virtual const std::string &get_path(void) const {
         return file_path;
     }
-    bool is_open(void) const {
+    virtual bool is_open(void) const {
         return open_flag;
     }
-    void close(void) {
+    virtual void close(void) {
         avpkt_free();
         close_avformat();
         open_flag = false;
         file_path.clear();
     }
-    void print_fmt_debug(void) {
+    virtual void print_fmt_debug(void) {
         if (avfmt != NULL) {
             fprintf(stderr,"Format: %d streams, start_time=%lld/%lld duration=%lld/%lld bitrate=%lld packet_size=%u\n",
                 static_cast<int>(avfmt->nb_streams),
@@ -916,7 +916,7 @@ public:
                 avfmt->packet_size);
         }
     }
-    void print_stream_debug(const size_t i) {
+    virtual void print_stream_debug(const size_t i) {
         AVStream *s = avfmt_stream(i);
         if (s != NULL) {
             fprintf(stderr,"Stream %zu: Stream time_base=%llu/%llu",i,
@@ -954,7 +954,7 @@ public:
             fprintf(stderr,"\n");
         }
     }
-    bool open_stream_codec(const size_t i) {
+    virtual bool open_stream_codec(const size_t i) {
         AVCodecContext *ctx = avfmt_stream_codec_context(i);
         if (ctx != NULL) {
             Stream &strm = stream(i);
@@ -974,7 +974,7 @@ public:
 
         return false;
     }
-    size_t open_stream_codecs(void) {
+    virtual size_t open_stream_codecs(void) {
         size_t ok = 0;
 
         for (size_t i=0;i < avfmt_stream_count();i++) {
@@ -984,7 +984,7 @@ public:
 
         return ok;
     }
-    void close_stream_codec(const size_t i) {
+    virtual void close_stream_codec(const size_t i) {
         AVCodecContext *ctx = avfmt_stream_codec_context(i);
         if (ctx != NULL) {
             Stream &strm = stream(i);
@@ -995,13 +995,13 @@ public:
             }
         }
     }
-    void close_stream_codecs(void) {
+    virtual void close_stream_codecs(void) {
         if (avfmt != NULL) {
             for (size_t i=0;i < avfmt_stream_count();i++)
                 close_stream_codec(i);
         }
     }
-    void close_avformat(void) {
+    virtual void close_avformat(void) {
         close_stream_codecs();
         if (avfmt != NULL) {
             fprintf(stderr,"Closing avformat %s\n",file_path.c_str());
@@ -1011,10 +1011,10 @@ public:
         streams.clear();
         eof = false;
     }
-    size_t avfmt_stream_count(void) const {
+    virtual size_t avfmt_stream_count(void) const {
         return (avfmt != NULL) ? size_t(avfmt->nb_streams) : size_t(0);
     }
-    AVStream *avfmt_stream(const size_t i) {
+    virtual AVStream *avfmt_stream(const size_t i) {
         if (avfmt != NULL) {
             if (i < size_t(avfmt->nb_streams))
                 return avfmt->streams[i];
@@ -1022,26 +1022,26 @@ public:
 
         return NULL;
     }
-    AVCodecContext *avfmt_stream_codec_context(const size_t i) {
+    virtual AVCodecContext *avfmt_stream_codec_context(const size_t i) {
         AVStream *s = avfmt_stream(i);
         if (s != NULL) return s->codec;
         return NULL;
     }
-    Stream &stream(const size_t i) {
+    virtual Stream &stream(const size_t i) {
         return streams.at(i); // throw C++ exception if out of bounds
     }
-    void avpkt_reset(void) {
+    virtual void avpkt_reset(void) {
         avpkt_free();
         av_init_packet(&avpkt);
         avpkt_valid = true;
     }
-    void avpkt_free(void) {
+    virtual void avpkt_free(void) {
         if (avpkt_valid) {
             av_packet_unref(&avpkt);
             avpkt_valid = false;
         }
     }
-    bool seek_to(double t) {
+    virtual bool seek_to(double t) {
         if (avfmt == NULL)
             return false;
 
@@ -1058,7 +1058,7 @@ public:
 
         return true;
     }
-    AVPacket *read_packet(void) { // caller must not free it, because we will
+    virtual AVPacket *read_packet(void) { // caller must not free it, because we will
         if (avfmt != NULL && !eof) {
             avpkt_reset();
             if (av_read_frame(avfmt,&avpkt) >= 0) {
@@ -1080,10 +1080,10 @@ public:
 
         return NULL;
     }
-    bool is_eof(void) const {
+    virtual bool is_eof(void) const {
         return eof;
     }
-    AVFrame *decode_frame(AVPacket *pkt,unsigned int &ft) {
+    virtual AVFrame *decode_frame(AVPacket *pkt,unsigned int &ft) {
         int got_frame = 0;
         int rd;
 
@@ -1152,7 +1152,7 @@ public:
 
         return NULL;
     }
-    void reset_codec(const size_t i) {
+    virtual void reset_codec(const size_t i) {
         AVStream *avs = avfmt_stream(i);
         if (avs == NULL)
             return;
@@ -1167,7 +1167,7 @@ public:
 
         avcodec_flush_buffers(avc);
     }
-    int find_default_stream(int type) {
+    virtual int find_default_stream(int type) {
         if (avfmt != NULL) {
             for (size_t i=0;i < avfmt_stream_count();i++) {
                 AVCodecContext *ctx = avfmt_stream_codec_context(i);
@@ -1180,10 +1180,10 @@ public:
 
         return -1;
     }
-    int find_default_stream_audio(void) {
+    virtual int find_default_stream_audio(void) {
         return find_default_stream(AVMEDIA_TYPE_AUDIO);
     }
-    int find_default_stream_video(void) {
+    virtual int find_default_stream_video(void) {
         return find_default_stream(AVMEDIA_TYPE_VIDEO);
     }
 protected:
