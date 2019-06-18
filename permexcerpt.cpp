@@ -1686,7 +1686,7 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
             last_next_pts[out_stream] = pts + int64_t(1);
 
         if (pts != AV_NOPTS_VALUE)
-            pt = (double(pts) * avs->time_base.num) / avs->time_base.den;   // i.e. 1001/30000 for 29.97
+            pt = fp.timestamp2float(avs,pts);
 
         if (pt > (out_point + 10.0))
             break; // that's far enough
@@ -1715,7 +1715,7 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
         if (outpkt != NULL) {
             int64_t adj;
 
-            adj = int64_t((in_point * avs->time_base.den) / avs->time_base.num);
+            adj = fp.float2timestamp(avs,in_point);
 
             if (pkt->pts != AV_NOPTS_VALUE)
                 pkt->pts -= adj;
