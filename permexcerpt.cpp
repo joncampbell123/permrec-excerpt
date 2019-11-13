@@ -646,13 +646,17 @@ bool GUI_Idle(void) {
                     do_seek_rel(out_point - play_in_time);
             }
             else if (event.key.keysym.sym == SDLK_LEFT) {
-                if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
+                if (event.key.keysym.mod & (KMOD_LCTRL|KMOD_RCTRL))
+                    do_seek_rel(-0.1);
+                else if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
                     do_seek_rel(-60);
                 else
                     do_seek_rel(-5);
             }
             else if (event.key.keysym.sym == SDLK_RIGHT) {
-                if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
+                if (event.key.keysym.mod & (KMOD_LCTRL|KMOD_RCTRL))
+                    do_seek_rel(0.1);
+                else if (event.key.keysym.mod & (KMOD_LSHIFT|KMOD_RSHIFT))
                     do_seek_rel(60);
                 else
                     do_seek_rel(5);
