@@ -890,9 +890,15 @@ public:
         if (path.empty())
             return false;
 
+        AVDictionary *opts = NULL;
+
+        /* mpegts needs to look harder */
+        av_dict_set(&opts,"analyzeduration","30000000",0);
+        av_dict_set(&opts,"probesize",      "300000000",0);
+
         file_path = path;
         assert(avfmt == NULL);
-        if (avformat_open_input(&avfmt,file_path.c_str(),NULL,NULL) < 0) {
+        if (avformat_open_input(&avfmt,file_path.c_str(),NULL,&opts) < 0) {
             fprintf(stderr,"avformat: failed to open input file %s\n",file_path.c_str());
             close();
             return false;
