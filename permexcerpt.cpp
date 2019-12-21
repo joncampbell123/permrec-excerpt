@@ -1090,8 +1090,14 @@ public:
     }
     AVPacket *read_packet(void) { // caller must not free it, because we will
         if (avfmt != NULL && !eof) {
+            int patience = 20;
+            int r;
+
+again:
             avpkt_reset();
-            if (av_read_frame(avfmt,&avpkt) >= 0) {
+            r = av_read_frame(avfmt,&avpkt);
+
+            if (r >= 0) {
                 // NTS: mpegts can add new streams if they appear
                 if (streams.size() != size_t(avfmt->nb_streams)) {
                     fprintf(stderr,"FFMPEG changed stream count!\n");
@@ -1110,8 +1116,13 @@ public:
                     return NULL;
                 }
             }
-
-            eof = true;
+            else if (r == AVERROR_EOF) {
+                eof = true;
+            }
+            else {
+                if (--patience > 0)
+                    goto again;
+            }
         }
 
         return NULL;
