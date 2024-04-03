@@ -785,8 +785,6 @@ public:
         }
         Stream(const Stream &s) = delete;
         Stream(Stream &&s) {
-            codec_open =            s.codec_open;
-                                    s.codec_open = false;
             frame =                 s.frame;
                                     s.frame = NULL;
             ts_adj =                s.ts_adj;
@@ -804,7 +802,6 @@ public:
             return true;
         }
     public:
-        bool            codec_open = false;
         AVFrame*        frame = NULL;
         int64_t         ts_adj = 0;
     };
@@ -965,44 +962,49 @@ public:
             fprintf(stderr,"\n");
         }
 
-        AVCodecContext *ctx = avfmt_stream_codec_context(i);
-        if (ctx != NULL) {
+        AVCodecParameters *p = avfmt_stream_codec_parameters(i);
+        if (p != NULL) {
+            const AVCodec *ctx = avcodec_find_decoder(p->codec_id);
+
             fprintf(stderr,"Stream %zu: Codec '%s' (%s)",i,
-                ctx->codec ? ctx->codec->name : NULL,
-                ctx->codec ? ctx->codec->long_name : NULL);
-            if (ctx->codec_type == AVMEDIA_TYPE_VIDEO)
+                ctx ? ctx->name : NULL,
+                ctx ? ctx->long_name : NULL);
+            if (p->codec_type == AVMEDIA_TYPE_VIDEO)
                 fprintf(stderr," type=Video");
-            else if (ctx->codec_type == AVMEDIA_TYPE_AUDIO)
+            else if (p->codec_type == AVMEDIA_TYPE_AUDIO)
                 fprintf(stderr," type=Audio");
             else
                 fprintf(stderr," type=?");
-            fprintf(stderr," time_base=%llu/%llu ticks/frame=%d delay=%d %dx%d coded=%dx%d hasb=%d\n",
-                static_cast<unsigned long long>(ctx->time_base.num),static_cast<unsigned long long>(ctx->time_base.den),
-                ctx->ticks_per_frame,ctx->delay,ctx->width,ctx->height,ctx->coded_width,ctx->coded_height,ctx->has_b_frames);
+            fprintf(stderr," frame_rate=%llu/%llu video_delay=%d %dx%d\n",
+                static_cast<unsigned long long>(p->framerate.num),static_cast<unsigned long long>(p->framerate.den),
+                p->video_delay,p->width,p->height);
             fprintf(stderr," rate=%d channels=%d framesize=%d blockalign=%d",
-                ctx->sample_rate,ctx->channels,ctx->frame_size,ctx->block_align);
+                p->sample_rate,p->ch_layout.nb_channels,p->frame_size,p->block_align);
             fprintf(stderr,"\n");
         }
     }
     bool open_stream_codec(const size_t i) {
         AVCodecContext *ctx = avfmt_stream_codec_context(i);
-        if (ctx != NULL) {
-            Stream &strm = stream(i);
-            if (!strm.codec_open) {
-                if (avcodec_open2(ctx,avcodec_find_decoder(ctx->codec_id),NULL) >= 0) {
-                    fprintf(stderr,"Stream %zu codec opened\n",i);
-                    print_stream_debug(i);
-                    strm.codec_open = true;
-                }
-                else {
-                    fprintf(stderr,"Stream %zu failed to open codec\n",i);
+        if (ctx == NULL) {
+            AVCodecParameters *p = avfmt_stream_codec_parameters(i);
+            if (p != NULL) {
+                ctx = avcodec_alloc_context3(avcodec_find_decoder(p->codec_id));
+                if (ctx != NULL) {
+                    avcodec_parameters_to_context(ctx,p);
+                    if (avcodec_open2(ctx,avcodec_find_decoder(p->codec_id),NULL) >= 0) {
+                        fprintf(stderr,"Stream %zu codec opened\n",i);
+                        avfmt_stream_codec_context_set(i,ctx);
+                        print_stream_debug(i);
+                    }
+                    else {
+                        fprintf(stderr,"Stream %zu failed to open codec\n",i);
+                        avcodec_free_context(&ctx);
+                    }
                 }
             }
-
-            return strm.codec_open;
         }
 
-        return false;
+        return (ctx != NULL);
     }
     size_t open_stream_codecs(void) {
         size_t ok = 0;
@@ -1017,12 +1019,9 @@ public:
     void close_stream_codec(const size_t i) {
         AVCodecContext *ctx = avfmt_stream_codec_context(i);
         if (ctx != NULL) {
-            Stream &strm = stream(i);
-            if (strm.codec_open) {
-                fprintf(stderr,"Stream %zu closing codec\n",i);
-                avcodec_close(ctx);
-                strm.codec_open = false;
-            }
+            fprintf(stderr,"Stream %zu closing codec\n",i);
+            avfmt_stream_codec_context_set(i,NULL);
+            avcodec_close(ctx);
         }
     }
     void close_stream_codecs(void) {
@@ -1052,9 +1051,17 @@ public:
 
         return NULL;
     }
+    void avfmt_stream_codec_context_set(const size_t i,AVCodecContext *ctx) {
+        if (i >= contexts.size()) contexts.resize(i+1u);
+        contexts[i] = ctx;
+    }
     AVCodecContext *avfmt_stream_codec_context(const size_t i) {
+        if (i < contexts.size()) return contexts[i];
+        return NULL;
+    }
+    AVCodecParameters *avfmt_stream_codec_parameters(const size_t i) {
         AVStream *s = avfmt_stream(i);
-        if (s != NULL) return s->codec;
+        if (s != NULL) return s->codecpar;
         return NULL;
     }
     Stream &stream(const size_t i) {
@@ -1148,29 +1155,36 @@ again:
             return NULL;
 
         Stream &strm = stream(size_t(pkt->stream_index));
-        if (!strm.codec_open) {
-            if (!open_stream_codec(size_t(pkt->stream_index)))
+        if (!open_stream_codec(size_t(pkt->stream_index)))
                 return NULL;
-        }
 
-        AVCodecContext *avc = avs->codec;
+        AVCodecParameters *p = avfmt_stream_codec_parameters(size_t(pkt->stream_index));
+        if (p == NULL)
+                return NULL;
+
+        AVCodecContext *avc = avfmt_stream_codec_context(size_t(pkt->stream_index));
         if (avc == NULL)
             return NULL;
 
-        if (avc->codec_type == AVMEDIA_TYPE_VIDEO) {
+        if (p->codec_type == AVMEDIA_TYPE_VIDEO) {
             if (!strm.open()) return NULL;
 
-            rd = avcodec_decode_video2(avc,strm.frame,&got_frame,pkt);
-            if (rd < 0 || !got_frame || strm.frame->width == 0 || strm.frame->height == 0)
-                return NULL;
+            /* HACK: To be consistent with how this code was written, send packet only if packet data, which we clear below */
+            if (pkt->size != 0) avcodec_send_packet(avc,pkt);
 
-            if (rd > pkt->size) rd = pkt->size;
-            pkt->data += rd;
-            pkt->size -= rd;
+            got_frame = 0;
+            if ((rd=avcodec_receive_frame(avc,strm.frame)) >= 0)
+                    got_frame = 1;
+
+            if (!got_frame || strm.frame->width == 0 || strm.frame->height == 0)
+                    return NULL;
+
+            pkt->data += pkt->size;
+            pkt->size  = 0;
 
             AVFrame *fr = av_frame_clone(strm.frame);
             if (fr == NULL)
-                return NULL;
+                    return NULL;
 
             ft = static_cast<unsigned int>(avc->codec_type);
             return fr;
@@ -1178,13 +1192,18 @@ again:
         else if (avc->codec_type == AVMEDIA_TYPE_AUDIO) {
             if (!strm.open()) return NULL;
 
-            rd = avcodec_decode_audio4(avc,strm.frame,&got_frame,pkt);
-            if (rd < 0 || !got_frame || strm.frame->nb_samples == 0)
+            /* HACK: To be consistent with how this code was written, send packet only if packet data, which we clear below */
+            if (pkt->size != 0) avcodec_send_packet(avc,pkt);
+
+            got_frame = 0;
+            if ((rd=avcodec_receive_frame(avc,strm.frame)) >= 0)
+                    got_frame = 1;
+
+            if (!got_frame || strm.frame->nb_samples == 0)
                 return NULL;
 
-            if (rd > pkt->size) rd = pkt->size;
-            pkt->data += rd;
-            pkt->size -= rd;
+            pkt->data += pkt->size;
+            pkt->size  = 0;
 
             AVFrame *fr = av_frame_clone(strm.frame);
             if (fr == NULL)
@@ -1204,11 +1223,7 @@ again:
         if (avs == NULL)
             return;
 
-        Stream &strm = stream(i);
-        if (!strm.codec_open)
-            return;
-
-        AVCodecContext *avc = avs->codec;
+        AVCodecContext *avc = avfmt_stream_codec_context(i);
         if (avc == NULL)
             return;
 
@@ -1217,9 +1232,9 @@ again:
     int find_default_stream(int type) {
         if (avfmt != NULL) {
             for (size_t i=0;i < avfmt_stream_count();i++) {
-                AVCodecContext *ctx = avfmt_stream_codec_context(i);
-                if (ctx != NULL) {
-                    if (ctx->codec_type == type)
+                AVCodecParameters *p = avfmt_stream_codec_parameters(i);
+                if (p != NULL) {
+                    if (p->codec_type == type)
                         return int(i);
                 }
             }
@@ -1235,6 +1250,7 @@ again:
     }
 protected:
     AVPacket                avpkt;
+    std::vector<AVCodecContext*> contexts;
     std::vector<Stream>     streams;
     std::string             file_path;
     AVFormatContext*        avfmt = NULL;
@@ -1567,11 +1583,11 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
     SDL_Event event;
     bool keyframe[2] = {false,false};
     int64_t last_next_pts[2] = {-1,-1};
+    const AVOutputFormat *ofmt = NULL;
     AVStream *out_video_stream = NULL;
     AVStream *out_audio_stream = NULL;
     AVFormatContext *ofmt_ctx = NULL;
     AVDictionary *mp4_dict = NULL;
-    AVOutputFormat *ofmt = NULL;
     const char *fmtname = NULL;
     auto &fp = current_file();
     bool was_playing = false;
@@ -1603,22 +1619,19 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
 
     if (in_file_video_stream >= 0) {
         AVStream *s = fp.avfmt_stream(size_t(in_file_video_stream));
-        if (s != NULL) {
-            out_video_stream = avformat_new_stream(ofmt_ctx, s->codec->codec);
+        AVCodecParameters *p = fp.avfmt_stream_codec_parameters(size_t(in_file_video_stream));
+        if (s != NULL && p != NULL) {
+            out_video_stream = avformat_new_stream(ofmt_ctx, avcodec_find_encoder(p->codec_id));
             if (out_video_stream == NULL) {
                 fprintf(stderr,"Failed to create new video stream\n");
                 goto fail;
             }
 
-            ret = avcodec_copy_context(out_video_stream->codec, s->codec);
+            ret = avcodec_parameters_copy(out_video_stream->codecpar, p);
             if (ret < 0) {
                 fprintf(stderr,"Failed to copy video context\n");
                 goto fail;
             }
-
-            out_video_stream->codec->codec_tag = 0;
-            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-                out_video_stream->codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
             video_stream = out_video_stream->index;
             fprintf(stderr,"Output video stream %d\n",video_stream);
@@ -1627,22 +1640,19 @@ void do_export(const std::string &out_filename,double in_point,double out_point)
 
     if (in_file_audio_stream >= 0) {
         AVStream *s = fp.avfmt_stream(size_t(in_file_audio_stream));
-        if (s != NULL) {
-            out_audio_stream = avformat_new_stream(ofmt_ctx, s->codec->codec);
+        AVCodecParameters *p = fp.avfmt_stream_codec_parameters(size_t(in_file_audio_stream));
+        if (s != NULL && p != NULL) {
+            out_audio_stream = avformat_new_stream(ofmt_ctx, avcodec_find_encoder(p->codec_id));
             if (out_audio_stream == NULL) {
                 fprintf(stderr,"Failed to create new audio stream\n");
                 goto fail;
             }
 
-            ret = avcodec_copy_context(out_audio_stream->codec, s->codec);
+            ret = avcodec_parameters_copy(out_audio_stream->codecpar, p);
             if (ret < 0) {
                 fprintf(stderr,"Failed to copy audio context\n");
                 goto fail;
             }
-
-            out_audio_stream->codec->codec_tag = 0;
-            if (ofmt_ctx->oformat->flags & AVFMT_GLOBALHEADER)
-                out_audio_stream->codec->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 
             audio_stream = out_audio_stream->index;
             fprintf(stderr,"Output audio stream %d\n",audio_stream);
@@ -2464,15 +2474,15 @@ void next_stream_of_type(const int type,int &in_file_stream) {
             in_file_stream = 0;
 
         do {
-            AVStream *s = fp.avfmt_stream(size_t(in_file_stream));
-            if (s != NULL) {
-                if (s->codec->codec_type == type) {
+            AVCodecParameters *p = fp.avfmt_stream_codec_parameters(size_t(in_file_stream));
+            if (p != NULL) {
+                if (p->codec_type == type) {
                     if (type == AVMEDIA_TYPE_VIDEO) {
-                        if (s->codec->width > 0 && s->codec->height > 0)
+                        if (p->width > 0 && p->height > 0)
                             break;
                     }
                     else if (type == AVMEDIA_TYPE_AUDIO) {
-                        if (s->codec->sample_rate > 0 && s->codec->channels > 0)
+                        if (p->sample_rate > 0 && p->ch_layout.nb_channels > 0)
                             break;
                     }
                     else {
@@ -2777,10 +2787,6 @@ int main(int argc,char **argv) {
             return 1;
         }
     }
-
-	av_register_all();
-	avformat_network_init();
-	avcodec_register_all();
 
 #if defined(WIN32)
     Windows_DPI_Awareness_Init();
